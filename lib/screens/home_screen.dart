@@ -1,4 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../utils/totp_store.dart';
+import '../utils/totp.dart';
+import 'add_account_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -9,35 +13,105 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
-  void showAddOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) {
-        return SafeArea(
+  List<String> totps = [];
+  Timer? timer;
+  int now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+    timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() {
+        now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> load() async {
+    final list = await TotpStore.load();
+    setState(() {
+      totps = list;
+    });
+  }
+
+  Future<void> addAccount() async {
+    final changed = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddAccountScreen()),
+    );
+    if (changed == true) load();
+  }
+
+  Widget tile(String url) {
+    final uri = Uri.parse(url);
+
+    final label = uri.pathSegments.last;
+    String platform = label;
+    String user = '';
+
+    if (label.contains(':')) {
+      final parts = label.split(':');
+      platform = parts[0];
+      user = parts.sublist(1).join(':');
+    }
+
+    final issuer = uri.queryParameters['issuer'];
+    if (issuer != null && issuer.isNotEmpty) {
+      platform = issuer;
+    }
+
+    final secret = uri.queryParameters['secret']!;
+    final digits = int.tryParse(uri.queryParameters['digits'] ?? '6') ?? 6;
+    final period = int.tryParse(uri.queryParameters['period'] ?? '30') ?? 30;
+
+    final code = Totp.generate(
+      secret: secret,
+      digits: digits,
+      period: period,
+      time: now,
+    );
+
+    final remaining = period - (now % period);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: ListTile(
+        title: Text(platform, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(user),
+        trailing: FittedBox(
+          fit: BoxFit.scaleDown,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              ListTile(
-                leading: const Icon(Icons.qr_code_scanner),
-                title: const Text('Scan QR'),
-                onTap: () {
-                  Navigator.pop(context);
-                },
+              Text(
+                code,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
               ),
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: const Text('Enter TOTP manually'),
-                onTap: () {
-                  Navigator.pop(context);
-                },
+              const SizedBox(height: 2),
+              Text(
+                '$remaining s',
+                style: const TextStyle(
+                  fontSize: 10,
+                  height: 1.0,
+                  color: Colors.grey,
+                ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -45,7 +119,7 @@ class HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CipherAuth'),
+        title: const Text('Authenticator'),
         actions: [
           IconButton(
             icon: Icon(
@@ -55,34 +129,23 @@ class HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: widget.onToggleTheme,
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {},
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'reset',
-                child: Text('Reset password'),
-              ),
-              PopupMenuItem(
-                value: 'sync',
-                child: Text('Sync'),
-              ),
-              PopupMenuItem(
-                value: 'download',
-                child: Text('Download'),
-              ),
+          PopupMenuButton(
+            itemBuilder: (_) => const [
+              PopupMenuItem(child: Text('Reset password')),
+              PopupMenuItem(child: Text('Sync')),
+              PopupMenuItem(child: Text('Download')),
             ],
           ),
         ],
       ),
-      body: const Center(
-        child: Text(
-          'No accounts yet',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
+      body: totps.isEmpty
+          ? const Center(child: Text('No accounts added'))
+          : ListView.builder(
+        itemCount: totps.length,
+        itemBuilder: (_, i) => tile(totps[i]),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: showAddOptions,
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        onPressed: addAccount,
         child: const Icon(Icons.add),
       ),
     );
