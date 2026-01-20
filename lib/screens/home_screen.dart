@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/totp_store.dart';
 import '../utils/totp.dart';
 import 'add_account_screen.dart';
@@ -49,41 +48,6 @@ class HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (_) => const AddAccountScreen()),
     );
     if (changed == true) load();
-  }
-
-  Future<void> showCiphertext() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('totp_store');
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Stored Ciphertext'),
-        content: SingleChildScrollView(
-          child: SelectableText(
-            raw ?? 'null',
-            style: const TextStyle(fontSize: 12),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (raw != null) {
-                Clipboard.setData(ClipboardData(text: raw));
-                HapticFeedback.lightImpact();
-              }
-            },
-            child: const Text('Copy'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget tile(Map<String, String> item) {
@@ -174,28 +138,9 @@ class HomeScreenState extends State<HomeScreen> {
         itemCount: totps.length,
         itemBuilder: (_, i) => tile(totps[i]),
       ),
-      floatingActionButton: Stack(
-        children: [
-          Positioned(
-            left: 32,
-            bottom: 0,
-            child: FloatingActionButton(
-              heroTag: 'debug',
-              mini: true,
-              onPressed: showCiphertext,
-              child: const Icon(Icons.code),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: FloatingActionButton(
-              heroTag: 'add',
-              onPressed: addAccount,
-              child: const Icon(Icons.add),
-            ),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: addAccount,
+        child: const Icon(Icons.add),
       ),
     );
   }
