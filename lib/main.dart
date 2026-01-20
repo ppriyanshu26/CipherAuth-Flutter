@@ -14,7 +14,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode themeMode = ThemeMode.light;
 
   @override
   void initState() {
@@ -25,15 +25,15 @@ class _MyAppState extends State<MyApp> {
   Future<void> _loadTheme() async {
     final isDark = await Storage.isDarkMode();
     setState(() {
-      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+      themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
     });
   }
 
   void toggleTheme() async {
-    final isDark = _themeMode == ThemeMode.dark;
+    final isDark = themeMode == ThemeMode.dark;
     await Storage.setDarkMode(!isDark);
     setState(() {
-      _themeMode = isDark ? ThemeMode.light : ThemeMode.dark;
+      themeMode = isDark ? ThemeMode.light : ThemeMode.dark;
     });
   }
 
@@ -43,7 +43,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
-      themeMode: _themeMode,
+      themeMode: themeMode,
       home: StartupScreen(onToggleTheme: toggleTheme),
     );
   }
