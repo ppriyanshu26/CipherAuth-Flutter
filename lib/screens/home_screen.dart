@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../utils/totp_store.dart';
 import '../utils/totp.dart';
+import '../utils/storage.dart';
 import 'add_account_screen.dart';
 import 'package:flutter/services.dart';
 
@@ -15,6 +16,9 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> {
   List<Map<String, String>> totps = [];
+  Set<int> selected = {};
+  bool selectionMode = false;
+
   Timer? timer;
   int now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
@@ -37,9 +41,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   Future<void> load() async {
     final list = await TotpStore.load();
-    setState(() {
-      totps = list;
-    });
+    setState(() => totps = list);
   }
 
   Future<void> addAccount() async {
@@ -50,12 +52,60 @@ class HomeScreenState extends State<HomeScreen> {
     if (changed == true) load();
   }
 
-  Widget tile(Map<String, String> item) {
-    final platform = item['platform']!;
-    final url = item['url']!;
-    final uri = Uri.parse(url);
+  Future<bool> confirmPassword() async {
+    final ctrl = TextEditingController();
+    bool ok = false;
 
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Confirm password'),
+        content: TextField(
+          controller: ctrl,
+          obscureText: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              ok = await Storage.verifyMasterPassword(ctrl.text);
+              if (!mounted) return;
+              Navigator.pop(context);
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    return ok;
+  }
+
+  Future<void> deleteSelected() async {
+    if (selected.isEmpty) return;
+
+    final ok = await confirmPassword();
+    if (!ok) return;
+
+    final remaining = <Map<String, String>>[];
+    for (int i = 0; i < totps.length; i++) {
+      if (!selected.contains(i)) {
+        remaining.add(totps[i]);
+      }
+    }
+
+    await TotpStore.saveAll(remaining);
+
+    setState(() {
+      totps = remaining;
+      selected.clear();
+      selectionMode = false;
+    });
+  }
+
+  Widget tile(int index, Map<String, String> item) {
+    final uri = Uri.parse(item['url']!);
     final label = uri.pathSegments.last;
+
     String user = '';
     if (label.contains(':')) {
       user = label.split(':').sublist(1).join(':');
@@ -77,41 +127,62 @@ class HomeScreenState extends State<HomeScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
-        title:
-        Text(platform, style: const TextStyle(fontWeight: FontWeight.bold)),
+        leading: selectionMode
+            ? Checkbox(
+          value: selected.contains(index),
+          onChanged: (_) {
+            setState(() {
+              selected.contains(index)
+                  ? selected.remove(index)
+                  : selected.add(index);
+            });
+          },
+        )
+            : null,
+        title: Text(
+          item['platform']!,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Text(user),
-        trailing: GestureDetector(
+        trailing: selectionMode
+            ? null
+            : GestureDetector(
           onTap: () {
             Clipboard.setData(ClipboardData(text: code));
             HapticFeedback.lightImpact();
           },
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  code,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                code,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '$remaining s',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    height: 1.0,
-                    color: Colors.grey,
-                  ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '$remaining s',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
+        onTap: selectionMode
+            ? () {
+          setState(() {
+            selected.contains(index)
+                ? selected.remove(index)
+                : selected.add(index);
+          });
+        }
+            : null,
       ),
     );
   }
@@ -130,18 +201,59 @@ class HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: widget.onToggleTheme,
           ),
+          PopupMenuButton(
+            onSelected: (v) {
+              if (v == 'delete') {
+                setState(() {
+                  selectionMode = true;
+                  selected.clear();
+                });
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'delete', child: Text('Delete')),
+            ],
+          ),
         ],
       ),
       body: totps.isEmpty
           ? const Center(child: Text('No accounts added'))
           : ListView.builder(
         itemCount: totps.length,
-        itemBuilder: (_, i) => tile(totps[i]),
+        itemBuilder: (_, i) => tile(i, totps[i]),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: selectionMode
+          ? null
+          : FloatingActionButton(
         onPressed: addAccount,
         child: const Icon(Icons.add),
       ),
+      bottomNavigationBar: selectionMode
+          ? BottomAppBar(
+        child: Padding(
+          padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    selectionMode = false;
+                    selected.clear();
+                  });
+                },
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: deleteSelected,
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        ),
+      )
+          : null,
     );
   }
 }
