@@ -8,19 +8,19 @@ class StartupScreen extends StatefulWidget {
   const StartupScreen({super.key, required this.onToggleTheme});
 
   @override
-  State<StartupScreen> createState() => _StartupScreenState();
+  State<StartupScreen> createState() => StartupScreenState();
 }
 
-class _StartupScreenState extends State<StartupScreen> {
+class StartupScreenState extends State<StartupScreen> {
   bool? hasPassword;
 
   @override
   void initState() {
     super.initState();
-    _check();
+    check();
   }
 
-  Future<void> _check() async {
+  Future<void> check() async {
     hasPassword = await Storage.hasMasterPassword();
     setState(() {});
   }

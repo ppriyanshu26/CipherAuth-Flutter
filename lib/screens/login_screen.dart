@@ -8,15 +8,15 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.onToggleTheme});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<LoginScreen> createState() => LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class LoginScreenState extends State<LoginScreen> {
   final controller = TextEditingController();
   bool obscure = true;
   String? error;
 
-  Future<void> _login() async {
+  Future<void> login() async {
     final ok = await Storage.verifyMasterPassword(controller.text);
     if (!ok) {
       setState(() => error = 'Wrong password');
@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(error!, style: const TextStyle(color: Colors.red)),
               ),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _login, child: const Text('Login')),
+            ElevatedButton(onPressed: login, child: const Text('Login')),
           ],
         ),
       ),

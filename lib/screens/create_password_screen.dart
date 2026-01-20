@@ -7,10 +7,10 @@ class CreatePasswordScreen extends StatefulWidget {
   const CreatePasswordScreen({super.key, required this.onToggleTheme});
 
   @override
-  State<CreatePasswordScreen> createState() => _CreatePasswordScreenState();
+  State<CreatePasswordScreen> createState() => CreatePasswordScreenState();
 }
 
-class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
+class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   final passwordController = TextEditingController();
   final confirmController = TextEditingController();
 
@@ -18,7 +18,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
   bool obscure2 = true;
   String? error;
 
-  Future<void> _create() async {
+  Future<void> create() async {
     final p1 = passwordController.text;
     final p2 = confirmController.text;
 
@@ -43,7 +43,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
     );
   }
 
-  AppBar _appBar(BuildContext context) {
+  AppBar appBar(BuildContext context) {
     return AppBar(
       title: const Text('Create Master Password'),
       actions: [
@@ -62,7 +62,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _appBar(context),
+      appBar: appBar(context),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -104,7 +104,7 @@ class _CreatePasswordScreenState extends State<CreatePasswordScreen> {
                 Text(error!, style: const TextStyle(color: Colors.red)),
               ),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _create, child: const Text('Create')),
+            ElevatedButton(onPressed: create, child: const Text('Create')),
           ],
         ),
       ),

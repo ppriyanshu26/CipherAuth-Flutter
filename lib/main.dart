@@ -10,19 +10,19 @@ class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<MyApp> createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   ThemeMode themeMode = ThemeMode.light;
 
   @override
   void initState() {
     super.initState();
-    _loadTheme();
+    loadTheme();
   }
 
-  Future<void> _loadTheme() async {
+  Future<void> loadTheme() async {
     final isDark = await Storage.isDarkMode();
     setState(() {
       themeMode = isDark ? ThemeMode.dark : ThemeMode.light;

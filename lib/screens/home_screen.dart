@@ -1,46 +1,51 @@
 import 'package:flutter/material.dart';
-import '../utils/crypto.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
   const HomeScreen({super.key, required this.onToggleTheme});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen> createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final inputController = TextEditingController();
-  final outputController = TextEditingController();
-  String status = '';
-
-  Future<void> _encrypt() async {
-    try {
-      final result =
-      await Crypto.encryptAes(inputController.text);
-      outputController.text = result;
-      setState(() => status = 'Encrypted ✔');
-    } catch (e) {
-      setState(() => status = 'Encrypt error');
-    }
-  }
-
-  Future<void> _decrypt() async {
-    try {
-      final result =
-      await Crypto.decryptAes(inputController.text);
-      outputController.text = result;
-      setState(() => status = 'Decrypted ✔');
-    } catch (e) {
-      setState(() => status = 'Decrypt error');
-    }
+class HomeScreenState extends State<HomeScreen> {
+  void showAddOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.qr_code_scanner),
+                title: const Text('Scan QR'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Enter TOTP manually'),
+                onTap: () {
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AES-GCM Test'),
+        title: const Text('CipherAuth'),
         actions: [
           IconButton(
             icon: Icon(
@@ -50,48 +55,35 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: widget.onToggleTheme,
           ),
+          PopupMenuButton<String>(
+            onSelected: (value) {},
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'reset',
+                child: Text('Reset password'),
+              ),
+              PopupMenuItem(
+                value: 'sync',
+                child: Text('Sync'),
+              ),
+              PopupMenuItem(
+                value: 'download',
+                child: Text('Download'),
+              ),
+            ],
+          ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: inputController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Input',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child:
-                  ElevatedButton(onPressed: _encrypt, child: const Text('Encrypt')),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child:
-                  ElevatedButton(onPressed: _decrypt, child: const Text('Decrypt')),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: outputController,
-              maxLines: 6,
-              readOnly: true,
-              decoration: const InputDecoration(
-                labelText: 'Output',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(status),
-          ],
+      body: const Center(
+        child: Text(
+          'No accounts yet',
+          style: TextStyle(fontSize: 16, color: Colors.grey),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: showAddOptions,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        child: const Icon(Icons.add),
       ),
     );
   }
