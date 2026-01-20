@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/totp_store.dart';
 import '../utils/totp.dart';
 import 'add_account_screen.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -13,7 +15,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
-  List<String> totps = [];
+  List<Map<String, String>> totps = [];
   Timer? timer;
   int now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
@@ -49,22 +51,50 @@ class HomeScreenState extends State<HomeScreen> {
     if (changed == true) load();
   }
 
-  Widget tile(String url) {
+  Future<void> showCiphertext() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('totp_store');
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Stored Ciphertext'),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            raw ?? 'null',
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (raw != null) {
+                Clipboard.setData(ClipboardData(text: raw));
+                HapticFeedback.lightImpact();
+              }
+            },
+            child: const Text('Copy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget tile(Map<String, String> item) {
+    final platform = item['platform']!;
+    final url = item['url']!;
     final uri = Uri.parse(url);
 
     final label = uri.pathSegments.last;
-    String platform = label;
     String user = '';
-
     if (label.contains(':')) {
-      final parts = label.split(':');
-      platform = parts[0];
-      user = parts.sublist(1).join(':');
-    }
-
-    final issuer = uri.queryParameters['issuer'];
-    if (issuer != null && issuer.isNotEmpty) {
-      platform = issuer;
+      user = label.split(':').sublist(1).join(':');
     }
 
     final secret = uri.queryParameters['secret']!;
@@ -83,32 +113,39 @@ class HomeScreenState extends State<HomeScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
-        title: Text(platform, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title:
+        Text(platform, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(user),
-        trailing: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                code,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
+        trailing: GestureDetector(
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: code));
+            HapticFeedback.lightImpact();
+          },
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  code,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '$remaining s',
-                style: const TextStyle(
-                  fontSize: 10,
-                  height: 1.0,
-                  color: Colors.grey,
+                const SizedBox(height: 2),
+                Text(
+                  '$remaining s',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    height: 1.0,
+                    color: Colors.grey,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -129,13 +166,6 @@ class HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: widget.onToggleTheme,
           ),
-          PopupMenuButton(
-            itemBuilder: (_) => const [
-              PopupMenuItem(child: Text('Reset password')),
-              PopupMenuItem(child: Text('Sync')),
-              PopupMenuItem(child: Text('Download')),
-            ],
-          ),
         ],
       ),
       body: totps.isEmpty
@@ -144,9 +174,28 @@ class HomeScreenState extends State<HomeScreen> {
         itemCount: totps.length,
         itemBuilder: (_, i) => tile(totps[i]),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: addAccount,
-        child: const Icon(Icons.add),
+      floatingActionButton: Stack(
+        children: [
+          Positioned(
+            left: 32,
+            bottom: 0,
+            child: FloatingActionButton(
+              heroTag: 'debug',
+              mini: true,
+              onPressed: showCiphertext,
+              child: const Icon(Icons.code),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: FloatingActionButton(
+              heroTag: 'add',
+              onPressed: addAccount,
+              child: const Icon(Icons.add),
+            ),
+          ),
+        ],
       ),
     );
   }

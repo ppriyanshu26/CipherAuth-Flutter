@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/totp_store.dart';
+import 'qr_scan_screen.dart';
 
 class AddAccountScreen extends StatefulWidget {
   const AddAccountScreen({super.key});
@@ -8,13 +9,15 @@ class AddAccountScreen extends StatefulWidget {
   State<AddAccountScreen> createState() => AddAccountScreenState();
 }
 
-class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerProviderStateMixin {
+class AddAccountScreenState extends State<AddAccountScreen>
+    with SingleTickerProviderStateMixin {
   late TabController tabController;
 
   final platformCtrl = TextEditingController();
   final usernameCtrl = TextEditingController();
   final secretCtrl = TextEditingController();
-  final qrCtrl = TextEditingController();
+
+  bool fromQr = false;
 
   @override
   void initState() {
@@ -41,13 +44,54 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
   }
 
   bool isValidBase32(String input) {
-    final cleaned = input
-        .replaceAll(' ', '')
-        .replaceAll('=', '')
-        .toUpperCase();
+    final cleaned =
+    input.replaceAll(' ', '').replaceAll('=', '').toUpperCase();
+    return cleaned.isNotEmpty &&
+        RegExp(r'^[A-Z2-7]+$').hasMatch(cleaned);
+  }
 
-    final regex = RegExp(r'^[A-Z2-7]+$');
-    return cleaned.isNotEmpty && regex.hasMatch(cleaned);
+  void populateFromOtpAuth(String url) {
+    final uri = Uri.parse(url);
+    final label = uri.pathSegments.last;
+
+    String platform = '';
+    String username = '';
+
+    if (label.contains(':')) {
+      final parts = label.split(':');
+      platform = parts[0];
+      username = parts.sublist(1).join(':');
+    } else {
+      platform = label;
+    }
+
+    final issuer = uri.queryParameters['issuer'];
+    if (issuer != null && issuer.isNotEmpty) {
+      platform = issuer;
+    }
+
+    final secret = uri.queryParameters['secret'] ?? '';
+
+    platformCtrl.text = platform;
+    usernameCtrl.text = username;
+    secretCtrl.text = secret.toUpperCase();
+
+    fromQr = true;
+    tabController.animateTo(1);
+    setState(() {});
+  }
+
+  Future<void> scanQr() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const QrScanScreen()),
+    );
+
+    if (result != null &&
+        result is String &&
+        result.startsWith('otpauth://')) {
+      populateFromOtpAuth(result);
+    }
   }
 
   Future<void> saveManual() async {
@@ -55,19 +99,8 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
     final username = usernameCtrl.text.trim();
     final secret = secretCtrl.text.replaceAll(' ', '').toUpperCase();
 
-    if (platform.isEmpty || username.isEmpty || secret.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All fields are required')),
-      );
-      return;
-    }
-
-    if (!isValidBase32(secret)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid Base32 secret')),
-      );
-      return;
-    }
+    if (platform.isEmpty || username.isEmpty || secret.isEmpty) return;
+    if (!isValidBase32(secret)) return;
 
     final url = buildTotpUrl(
       platform: platform,
@@ -75,23 +108,7 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
       secret: secret,
     );
 
-    await TotpStore.add(url);
-
-    if (!mounted) return;
-    Navigator.pop(context, true);
-  }
-
-  Future<void> saveQr() async {
-    final text = qrCtrl.text.trim();
-
-    if (!text.startsWith('otpauth://')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid otpauth URL')),
-      );
-      return;
-    }
-
-    await TotpStore.add(text);
+    await TotpStore.add(platform, url);
 
     if (!mounted) return;
     Navigator.pop(context, true);
@@ -113,29 +130,11 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
       body: TabBarView(
         controller: tabController,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Text(
-                  'Paste otpauth URL',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: qrCtrl,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'otpauth://...',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: saveQr,
-                  child: const Text('Save'),
-                ),
-              ],
+          Center(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Scan QR'),
+              onPressed: scanQr,
             ),
           ),
           Padding(
@@ -152,6 +151,7 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
                 const SizedBox(height: 12),
                 TextField(
                   controller: usernameCtrl,
+                  readOnly: fromQr,
                   decoration: const InputDecoration(
                     labelText: 'Username / Email',
                     border: OutlineInputBorder(),
@@ -160,6 +160,7 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
                 const SizedBox(height: 12),
                 TextField(
                   controller: secretCtrl,
+                  readOnly: fromQr,
                   decoration: const InputDecoration(
                     labelText: 'Secret key',
                     border: OutlineInputBorder(),
