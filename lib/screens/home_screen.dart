@@ -61,10 +61,7 @@ class HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Confirm password'),
-        content: TextField(
-          controller: ctrl,
-          obscureText: true,
-        ),
+        content: TextField(controller: ctrl, obscureText: true),
         actions: [
           TextButton(
             onPressed: () async {
@@ -143,17 +140,10 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Widget tile(int index, Map<String, String> item) {
-    final uri = Uri.parse(item['url']!);
-    final label = uri.pathSegments.last;
-
-    String user = '';
-    if (label.contains(':')) {
-      user = label.split(':').sublist(1).join(':');
-    }
-
-    final secret = uri.queryParameters['secret']!;
-    final digits = int.tryParse(uri.queryParameters['digits'] ?? '6') ?? 6;
-    final period = int.tryParse(uri.queryParameters['period'] ?? '30') ?? 30;
+    final user = item['username'] ?? '';
+    final secret = item['secretcode']!;
+    final digits = 6;
+    final period = 30;
 
     final code = Totp.generate(
       secret: secret,
@@ -169,15 +159,15 @@ class HomeScreenState extends State<HomeScreen> {
       child: ListTile(
         leading: selectionMode
             ? Checkbox(
-          value: selected.contains(index),
-          onChanged: (_) {
-            setState(() {
-              selected.contains(index)
-                  ? selected.remove(index)
-                  : selected.add(index);
-            });
-          },
-        )
+                value: selected.contains(index),
+                onChanged: (_) {
+                  setState(() {
+                    selected.contains(index)
+                        ? selected.remove(index)
+                        : selected.add(index);
+                  });
+                },
+              )
             : null,
         title: Text(
           item['platform']!,
@@ -187,41 +177,38 @@ class HomeScreenState extends State<HomeScreen> {
         trailing: selectionMode
             ? null
             : GestureDetector(
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: code));
-            HapticFeedback.lightImpact();
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                code,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: code));
+                  HapticFeedback.lightImpact();
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      code,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$remaining s',
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                '$remaining s',
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-        ),
         onTap: selectionMode
             ? () {
-          setState(() {
-            selected.contains(index)
-                ? selected.remove(index)
-                : selected.add(index);
-          });
-        }
+                setState(() {
+                  selected.contains(index)
+                      ? selected.remove(index)
+                      : selected.add(index);
+                });
+              }
             : null,
       ),
     );
@@ -259,9 +246,9 @@ class HomeScreenState extends State<HomeScreen> {
       body: totps.isEmpty
           ? const Center(child: Text('No accounts added'))
           : ListView.builder(
-        itemCount: totps.length,
-        itemBuilder: (_, i) => tile(i, totps[i]),
-      ),
+              itemCount: totps.length,
+              itemBuilder: (_, i) => tile(i, totps[i]),
+            ),
       floatingActionButton: Stack(
         children: [
           Positioned(
@@ -280,38 +267,40 @@ class HomeScreenState extends State<HomeScreen> {
             child: selectionMode
                 ? const SizedBox.shrink()
                 : FloatingActionButton(
-              heroTag: 'add',
-              onPressed: addAccount,
-              child: const Icon(Icons.add),
-            ),
+                    heroTag: 'add',
+                    onPressed: addAccount,
+                    child: const Icon(Icons.add),
+                  ),
           ),
         ],
       ),
       bottomNavigationBar: selectionMode
           ? BottomAppBar(
-        child: Padding(
-          padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    selectionMode = false;
-                    selected.clear();
-                  });
-                },
-                child: const Text('Cancel'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          selectionMode = false;
+                          selected.clear();
+                        });
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: deleteSelected,
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
               ),
-              TextButton(
-                onPressed: deleteSelected,
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        ),
-      )
+            )
           : null,
     );
   }

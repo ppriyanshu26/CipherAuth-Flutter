@@ -1,9 +1,16 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crypto/crypto.dart';
 import 'crypto.dart';
 
 class TotpStore {
   static const storeKey = 'totp_store';
+
+  static String _generateId(String platform, String secret) {
+    final salt = (DateTime.now().millisecondsSinceEpoch / 1000).toString();
+    final input = '$platform$secret$salt';
+    return sha256.convert(input.codeUnits).toString();
+  }
 
   static Future<List<Map<String, String>>> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -16,8 +23,10 @@ class TotpStore {
 
     return decoded.map<Map<String, String>>((e) {
       return {
+        'id': e['id'] as String,
         'platform': e['platform'] as String,
-        'url': e['url'] as String,
+        'username': e['username'] as String,
+        'secretcode': e['secretcode'] as String,
       };
     }).toList();
   }
@@ -39,31 +48,28 @@ class TotpStore {
     final u = username.trim().toLowerCase();
 
     for (final item in list) {
-      final existingUri = Uri.parse(item['url']!);
-      final existingLabel = existingUri.pathSegments.last;
-
-      String existingUser = '';
-      if (existingLabel.contains(':')) {
-        existingUser =
-            existingLabel.split(':').sublist(1).join(':');
-      }
-
-      final existingSecret =
-      (existingUri.queryParameters['secret'] ?? '').toUpperCase();
+      final itemSecret = item['secretcode'] ?? '';
 
       if (item['platform']!.trim().toLowerCase() == p &&
-          existingUser.trim().toLowerCase() == u &&
-          existingSecret == secret) {
+          item['username']!.trim().toLowerCase() == u &&
+          itemSecret == secret) {
         return false;
       }
     }
 
-    list.add({'platform': platform, 'url': url});
+    final newItem = {
+      'id': _generateId(platform, secret),
+      'platform': platform,
+      'username': username,
+      'secretcode': secret,
+    };
 
-    list.sort((a, b) =>
-        a['platform']!.toLowerCase().compareTo(
-          b['platform']!.toLowerCase(),
-        ));
+    list.add(newItem);
+
+    list.sort(
+      (a, b) =>
+          a['platform']!.toLowerCase().compareTo(b['platform']!.toLowerCase()),
+    );
 
     final encrypted = await Crypto.encryptAes(jsonEncode(list));
     final prefs = await SharedPreferences.getInstance();
