@@ -36,19 +36,7 @@ class LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Theme.of(context).brightness == Brightness.dark
-                  ? Icons.wb_sunny
-                  : Icons.nightlight_round,
-            ),
-            onPressed: widget.onToggleTheme,
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Login')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -61,18 +49,15 @@ class LoginScreenState extends State<LoginScreen> {
                 labelText: 'Master Password',
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
-                  icon: Icon(
-                      obscure ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () =>
-                      setState(() => obscure = !obscure),
+                  icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                  onPressed: () => setState(() => obscure = !obscure),
                 ),
               ),
             ),
             if (error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child:
-                Text(error!, style: const TextStyle(color: Colors.red)),
+                child: Text(error!, style: const TextStyle(color: Colors.red)),
               ),
             const SizedBox(height: 16),
             ElevatedButton(onPressed: login, child: const Text('Login')),

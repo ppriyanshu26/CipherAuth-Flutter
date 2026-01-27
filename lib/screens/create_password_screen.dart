@@ -44,19 +44,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   }
 
   AppBar appBar(BuildContext context) {
-    return AppBar(
-      title: const Text('Create Master Password'),
-      actions: [
-        IconButton(
-          icon: Icon(
-            Theme.of(context).brightness == Brightness.dark
-                ? Icons.wb_sunny
-                : Icons.nightlight_round,
-          ),
-          onPressed: widget.onToggleTheme,
-        ),
-      ],
-    );
+    return AppBar(title: const Text('Create Master Password'));
   }
 
   @override
@@ -76,9 +64,9 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   icon: Icon(
-                      obscure1 ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () =>
-                      setState(() => obscure1 = !obscure1),
+                    obscure1 ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () => setState(() => obscure1 = !obscure1),
                 ),
               ),
             ),
@@ -91,17 +79,16 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   icon: Icon(
-                      obscure2 ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () =>
-                      setState(() => obscure2 = !obscure2),
+                    obscure2 ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () => setState(() => obscure2 = !obscure2),
                 ),
               ),
             ),
             if (error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child:
-                Text(error!, style: const TextStyle(color: Colors.red)),
+                child: Text(error!, style: const TextStyle(color: Colors.red)),
               ),
             const SizedBox(height: 16),
             ElevatedButton(onPressed: create, child: const Text('Create')),

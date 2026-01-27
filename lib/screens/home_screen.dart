@@ -5,6 +5,7 @@ import '../utils/totp_store.dart';
 import '../utils/totp.dart';
 import '../utils/storage.dart';
 import 'add_account_screen.dart';
+import 'settings_screen.dart';
 import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -156,32 +157,85 @@ class HomeScreenState extends State<HomeScreen> {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: ListTile(
-        leading: selectionMode
-            ? Checkbox(
-                value: selected.contains(index),
-                onChanged: (_) {
-                  setState(() {
-                    selected.contains(index)
-                        ? selected.remove(index)
-                        : selected.add(index);
-                  });
-                },
-              )
-            : null,
-        title: Text(
-          item['platform']!,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(user),
-        trailing: selectionMode
-            ? null
-            : GestureDetector(
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: code));
-                  HapticFeedback.lightImpact();
-                },
-                child: Column(
+      child: GestureDetector(
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: code));
+          HapticFeedback.lightImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('TOTP copied to clipboard'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        },
+        onLongPress: () {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('Delete credential?'),
+              content: Text('Delete ${item['platform']} - $user?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final ok = await confirmPassword();
+                    if (!ok) return;
+
+                    final remaining = <Map<String, String>>[];
+                    for (int i = 0; i < totps.length; i++) {
+                      if (i != index) remaining.add(totps[i]);
+                    }
+
+                    await TotpStore.saveAll(remaining);
+
+                    setState(() {
+                      totps = remaining;
+                    });
+
+                    if (!mounted) return;
+                    Navigator.pop(context);
+
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Credential deleted'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+        child: ListTile(
+          leading: selectionMode
+              ? Checkbox(
+                  value: selected.contains(index),
+                  onChanged: (_) {
+                    setState(() {
+                      selected.contains(index)
+                          ? selected.remove(index)
+                          : selected.add(index);
+                    });
+                  },
+                )
+              : null,
+          title: Text(
+            item['platform']!,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(user),
+          trailing: selectionMode
+              ? null
+              : Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -200,16 +254,16 @@ class HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-              ),
-        onTap: selectionMode
-            ? () {
-                setState(() {
-                  selected.contains(index)
-                      ? selected.remove(index)
-                      : selected.add(index);
-                });
-              }
-            : null,
+          onTap: selectionMode
+              ? () {
+                  setState(() {
+                    selected.contains(index)
+                        ? selected.remove(index)
+                        : selected.add(index);
+                  });
+                }
+              : null,
+        ),
       ),
     );
   }
@@ -221,25 +275,16 @@ class HomeScreenState extends State<HomeScreen> {
         title: const Text('Authenticator'),
         actions: [
           IconButton(
-            icon: Icon(
-              Theme.of(context).brightness == Brightness.dark
-                  ? Icons.wb_sunny
-                  : Icons.nightlight_round,
-            ),
-            onPressed: widget.onToggleTheme,
-          ),
-          PopupMenuButton(
-            onSelected: (v) {
-              if (v == 'delete') {
-                setState(() {
-                  selectionMode = true;
-                  selected.clear();
-                });
-              }
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      SettingsScreen(onToggleTheme: widget.onToggleTheme),
+                ),
+              );
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'delete', child: Text('Delete')),
-            ],
           ),
         ],
       ),
