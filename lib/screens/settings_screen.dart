@@ -134,7 +134,6 @@ class SettingsScreenState extends State<SettingsScreen> {
                   MaterialPageRoute(builder: (_) => const SyncScreen()),
                 );
                 if (syncOccurred == true && mounted) {
-                  print('[SYNC] Sync occurred, credentials may have changed');
                 }
               },
             ),

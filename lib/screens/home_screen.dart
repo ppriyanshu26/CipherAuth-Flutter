@@ -327,7 +327,6 @@ class HomeScreenState extends State<HomeScreen> {
                       SettingsScreen(onToggleTheme: widget.onToggleTheme),
                 ),
               );
-              print('[HOME] Reloading credentials after settings');
               load();
             },
           ),

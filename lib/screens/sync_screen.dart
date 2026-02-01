@@ -38,19 +38,15 @@ class SyncScreenState extends State<SyncScreen> {
       if (masterPassword == null) return;
 
       final localCredentials = await TotpStore.load();
-      print('[SYNC] Flutter listener initialized, listening for sync...');
       SyncConnection.startListeningForSync(
         passwordHash,
         masterPassword,
         localCredentials,
         (success, mergedCredentials) async {
-          print(
-            '[SYNC] Flutter responder callback: success=$success, hasMerged=${mergedCredentials != null}',
-          );
           if (!mounted) return;
           if (success && mergedCredentials != null) {
             await TotpStore.saveAll(mergedCredentials);
-            print('[SYNC] Credentials saved to TotpStore');
+            if (!mounted) return;
             syncOccurred = true;
             final message = '✅ SYNC COMPLETE!';
             ScaffoldMessenger.of(context).showSnackBar(
@@ -121,9 +117,6 @@ class SyncScreenState extends State<SyncScreen> {
     final localCredentials = await TotpStore.load();
 
     if (!mounted) return;
-    print(
-      '[SYNC] Initiating sync with $deviceIp, ${localCredentials.length} local credentials',
-    );
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('🔄 Connecting and syncing...'),
@@ -139,19 +132,15 @@ class SyncScreenState extends State<SyncScreen> {
     );
 
     if (!mounted) return;
-    print(
-      '[SYNC] Sync result: success=${result['success']}, reason=${result['reason']}',
-    );
 
     if (result['success'] == true) {
       final mergedCredentials =
           result['mergedCredentials'] as List<Map<String, String>>?;
       if (mergedCredentials != null) {
-        print('[SYNC] Saving ${mergedCredentials.length} merged credentials');
         await TotpStore.saveAll(mergedCredentials);
         syncOccurred = true;
       }
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('✅ SYNC COMPLETE!'),
@@ -164,6 +153,7 @@ class SyncScreenState extends State<SyncScreen> {
       final message = reason == 'password_mismatch'
           ? '❌ PASSWORD MISMATCH'
           : '❌ Sync failed: $reason';
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
@@ -190,7 +180,6 @@ class SyncScreenState extends State<SyncScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            print('[SYNC] Back pressed, stopping listener');
             SyncConnection.stopListening();
             broadcaster.stopBroadcasting();
             Navigator.pop(context, syncOccurred);

@@ -19,18 +19,16 @@ class SyncConnection {
     List<Map<String, String>> localCredentials,
   ) async {
     try {
-      print('[SYNC] Connecting to $deviceIp:$syncPort');
       final socket = await Socket.connect(
         deviceIp,
         syncPort,
       ).timeout(Duration(seconds: 5));
-      print('[SYNC] Connected, sending PASSWORD_HASH');
-      
+
       final passwordMessage = jsonEncode({
         'type': 'PASSWORD_HASH',
         'hash': passwordHash,
       });
-      socket.write(passwordMessage);
+      socket.write('$passwordMessage\n');
       await socket.flush();
 
       final completer = Completer<Map<String, dynamic>>();
@@ -42,38 +40,40 @@ class SyncConnection {
         (data) async {
           try {
             messageBuffer.addAll(data);
-            if (messageBuffer.isNotEmpty) {
-              final message = jsonDecode(utf8.decode(messageBuffer));
+
+            while (messageBuffer.contains(10)) {
+              final newlineIndex = messageBuffer.indexOf(10);
+              final messageBytes = messageBuffer.sublist(0, newlineIndex);
+              messageBuffer.removeRange(0, newlineIndex + 1);
+
+              final message = jsonDecode(utf8.decode(messageBytes));
               final type = message['type'] as String?;
 
-              if (!receivedPasswordResponse && type == 'PASSWORD_HASH_RESPONSE') {
+              if (!receivedPasswordResponse &&
+                  type == 'PASSWORD_HASH_RESPONSE') {
                 receivedPasswordResponse = true;
                 messageBuffer.clear();
-                print('[SYNC] Received PASSWORD_HASH_RESPONSE');
 
                 if (message['hash'] != passwordHash) {
                   socket.close();
-                  print('[SYNC] PASSWORD MISMATCH!');
-                  completer.complete(
-                    {'success': false, 'reason': 'password_mismatch'},
-                  );
+                  completer.complete({
+                    'success': false,
+                    'reason': 'password_mismatch',
+                  });
                   return;
                 }
 
-                print('[SYNC] Password matched, requesting data...');
                 final requestMessage = jsonEncode({'type': 'REQUEST_DATA'});
-                socket.write(requestMessage);
+                socket.write('$requestMessage\n');
                 await socket.flush();
               } else if (receivedPasswordResponse &&
                   !receivedDataResponse &&
                   type == 'DATA_RESPONSE') {
                 receivedDataResponse = true;
                 messageBuffer.clear();
-                print('[SYNC] Received DATA_RESPONSE, merging credentials...');
 
                 final encryptedRemoteData = message['encrypted_data'] as String;
-                final decryptedRemoteData =
-                    await Crypto.decryptAesWithPassword(
+                final decryptedRemoteData = await Crypto.decryptAesWithPassword(
                   encryptedRemoteData,
                   masterPassword,
                 );
@@ -86,8 +86,7 @@ class SyncConnection {
                 );
 
                 final mergedJson = jsonEncode(mergedCredentials);
-                final encryptedMergedData =
-                    await Crypto.encryptAesWithPassword(
+                final encryptedMergedData = await Crypto.encryptAesWithPassword(
                   mergedJson,
                   masterPassword,
                 );
@@ -96,43 +95,42 @@ class SyncConnection {
                   'type': 'MERGED_DATA',
                   'encrypted_data': encryptedMergedData,
                 });
-                socket.write(mergedMessage);
+                socket.write('$mergedMessage\n');
                 await socket.flush();
 
                 socket.close();
-                print(
-                  '[SYNC] Sync complete as initiator, merged ${mergedCredentials.length} unique credentials',
-                );
 
-                completer.complete(
-                  {'success': true, 'mergedCredentials': mergedCredentials},
-                );
+                completer.complete({
+                  'success': true,
+                  'mergedCredentials': mergedCredentials,
+                });
               }
             }
           } catch (e) {
             if (!completer.isCompleted) {
-              print('[SYNC] ERROR parsing message: $e');
-              completer.complete(
-                {'success': false, 'reason': 'message_parse_error'},
-              );
+              completer.complete({
+                'success': false,
+                'reason': 'message_parse_error',
+              });
             }
             socket.close();
           }
         },
         onError: (e) {
           if (!completer.isCompleted) {
-            print('[SYNC] Socket error: $e');
-            completer.complete(
-              {'success': false, 'reason': 'connection_error', 'error': '$e'},
-            );
+            completer.complete({
+              'success': false,
+              'reason': 'connection_error',
+              'error': '$e',
+            });
           }
         },
         onDone: () {
           if (!completer.isCompleted) {
-            print('[SYNC] Connection closed before sync completed');
-            completer.complete(
-              {'success': false, 'reason': 'connection_closed'},
-            );
+            completer.complete({
+              'success': false,
+              'reason': 'connection_closed',
+            });
           }
         },
       );
@@ -145,7 +143,6 @@ class SyncConnection {
         },
       );
     } catch (e) {
-      print('[SYNC] ERROR: $e');
       return {
         'success': false,
         'reason': 'connection_error',
@@ -165,7 +162,6 @@ class SyncConnection {
       ServerSocket.bind(InternetAddress.anyIPv4, syncPort)
           .then((server) {
             currServer = server;
-            print('[SYNC] Listening on port $syncPort');
             server.listen((socket) {
               handleSyncConnection(
                 socket,
@@ -177,7 +173,6 @@ class SyncConnection {
             });
           })
           .catchError((e) {
-            print('[SYNC] Failed to bind to port: $e');
           });
     });
   }
@@ -196,12 +191,16 @@ class SyncConnection {
       (data) async {
         try {
           messageBuffer.addAll(data);
-          if (messageBuffer.isNotEmpty) {
-            final message = jsonDecode(utf8.decode(messageBuffer));
+
+          while (messageBuffer.contains(10)) {
+            final newlineIndex = messageBuffer.indexOf(10);
+            final messageBytes = messageBuffer.sublist(0, newlineIndex);
+            messageBuffer.removeRange(0, newlineIndex + 1);
+
+            final message = jsonDecode(utf8.decode(messageBytes));
             final type = message['type'] as String?;
 
             if (type == 'PASSWORD_HASH') {
-              messageBuffer.clear();
               final remoteHash = message['hash'];
               passwordMatched = remoteHash == passwordHash;
 
@@ -210,11 +209,9 @@ class SyncConnection {
                 'hash': passwordHash,
                 'match': passwordMatched,
               });
-              socket.write(response);
+              socket.write('$response\n');
               await socket.flush();
-              print('[SYNC] Sent PASSWORD_HASH_RESPONSE');
             } else if (type == 'REQUEST_DATA' && passwordMatched) {
-              messageBuffer.clear();
               final credentialsJson = jsonEncode(localCredentials);
               final encryptedData = await Crypto.encryptAesWithPassword(
                 credentialsJson,
@@ -225,11 +222,9 @@ class SyncConnection {
                 'type': 'DATA_RESPONSE',
                 'encrypted_data': encryptedData,
               });
-              socket.write(response);
+              socket.write('$response\n');
               await socket.flush();
-              print('[SYNC] Sent DATA_RESPONSE');
             } else if (type == 'MERGED_DATA' && passwordMatched) {
-              messageBuffer.clear();
               final encryptedMergedData = message['encrypted_data'] as String;
               final decryptedMergedData = await Crypto.decryptAesWithPassword(
                 encryptedMergedData,
@@ -254,12 +249,10 @@ class SyncConnection {
             }
           }
         } catch (e) {
-          print('[SYNC] ERROR in responder: $e');
           socket.close();
         }
       },
       onError: (e) {
-        print('[SYNC] Socket error in responder: $e');
         socket.close();
       },
       onDone: () {
