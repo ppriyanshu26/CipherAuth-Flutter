@@ -2,7 +2,7 @@
 
 CipherAuth is a secure, cross-platform TOTP (Time-based One-Time Password) authenticator application designed for simplicity and security. Built with Flutter, it provides a safe vault for your two-factor authentication tokens across iOS and Android platforms.
 
-## 📦 [Releases](https://github.com/ppriyanshu26/CipherAuth-Flutter/releases)
+## 📦 Releases
 
 Download the latest version for Android from our [releases page](https://github.com/ppriyanshu26/CipherAuth-Flutter/releases).
 
