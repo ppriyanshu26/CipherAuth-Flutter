@@ -81,6 +81,17 @@ class HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Color changeColor(int remaining, int period) {
+    final percentage = (remaining / period) * 100;
+    if (percentage > 66) {
+      return Colors.green;
+    } else if (percentage > 33) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+
   Widget tile(int index, Map<String, String> item) {
     final user = item['username'] ?? '';
     final secret = item['secretcode']!;
@@ -96,6 +107,7 @@ class HomeScreenState extends State<HomeScreen> {
       );
 
       final remaining = period - (now % period);
+      final color = changeColor(remaining, period);
 
       return Card(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -155,6 +167,8 @@ class HomeScreenState extends State<HomeScreen> {
             );
           },
           child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            minLeadingWidth: 0,
             leading: selectionMode
                 ? Checkbox(
                     value: selected.contains(index),
@@ -169,7 +183,7 @@ class HomeScreenState extends State<HomeScreen> {
                 : null,
             title: Text(
               item['platform']!,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             subtitle: Text(user),
             trailing: selectionMode
@@ -180,18 +194,20 @@ class HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         code,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
+                          color: color,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 0),
                       Text(
                         '$remaining s',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: color.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -294,6 +310,11 @@ class HomeScreenState extends State<HomeScreen> {
               )
             : const Text('CipherAuth'),
         actions: [
+          if (!isSearching && !selectionMode)
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: addAccount,
+            ),
           if (!isSearching)
             IconButton(
               icon: const Icon(Icons.search),
@@ -304,19 +325,20 @@ class HomeScreenState extends State<HomeScreen> {
                 searchFocusNode.requestFocus();
               },
             ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      SettingsScreen(onToggleTheme: widget.onToggleTheme),
-                ),
-              );
-              load();
-            },
-          ),
+          if (!selectionMode)
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        SettingsScreen(onToggleTheme: widget.onToggleTheme),
+                  ),
+                );
+                load();
+              },
+            ),
         ],
       ),
       body: GestureDetector(
@@ -338,13 +360,7 @@ class HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: selectionMode
-          ? null
-          : FloatingActionButton(
-              heroTag: 'add',
-              onPressed: addAccount,
-              child: const Icon(Icons.add),
-            ),
+      floatingActionButton: null,
       bottomNavigationBar: selectionMode
           ? BottomAppBar(
               child: Padding(
