@@ -54,7 +54,6 @@ class SettingsScreenState extends State<SettingsScreen> {
     final (success, message) = await ExportService.exportToCsv();
 
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -92,8 +91,8 @@ class SettingsScreenState extends State<SettingsScreen> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.fingerprint),
-              title: const Text('Unlock with Biometrics'),
-              subtitle: const Text('Unavailable'),
+              title: const Text('Biometrics'),
+              subtitle: const Text('Unlock with your fingerprint or face'),
               enabled: false,
               onTap: null,
             ),

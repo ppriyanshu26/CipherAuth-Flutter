@@ -13,20 +13,20 @@ class ExportService {
           if (status.isDenied) {
             return (
               false,
-              '❌ Storage permission denied. Please allow access in settings.',
+              'Storage permission denied. Please allow access in settings.',
             );
           } else if (status.isPermanentlyDenied) {
             return (
               false,
-              '❌ Storage permission permanently denied. Please enable in app settings.',
+              'Storage permission permanently denied. Please enable in app settings.',
             );
           }
-          return (false, '❌ Storage permission required to export.');
+          return (false, 'Storage permission required to export.');
         }
       } else if (Platform.isIOS) {
         final status = await Permission.photos.request();
         if (!status.isGranted && !status.isDenied) {
-          return (false, '❌ Permission required to export files.');
+          return (false, 'Permission required to export files.');
         }
       }
 
@@ -93,9 +93,9 @@ class ExportService {
       final filepath = File('${directory.path}/$filename');
       await filepath.writeAsString(csvContent, encoding: utf8);
 
-      return (true, '✅ File saved to $locationName folder');
+      return (true, 'File saved to $locationName folder');
     } catch (e) {
-      return (false, '❌ Export failed: ${e.toString()}');
+      return (false, 'Export failed: ${e.toString()}');
     }
   }
 }

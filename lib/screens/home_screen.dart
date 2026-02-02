@@ -18,6 +18,9 @@ class HomeScreenState extends State<HomeScreen> {
   List<Map<String, String>> totps = [];
   Set<int> selected = {};
   bool selectionMode = false;
+  String searchQuery = '';
+  late FocusNode searchFocusNode = FocusNode();
+  bool isSearching = false;
 
   Timer? timer;
   int now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -26,6 +29,14 @@ class HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     load();
+    searchFocusNode.addListener(() {
+      if (!searchFocusNode.hasFocus && isSearching) {
+        setState(() {
+          isSearching = false;
+          searchQuery = '';
+        });
+      }
+    });
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
         now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -36,6 +47,7 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     timer?.cancel();
+    searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -111,7 +123,6 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                   TextButton(
                     onPressed: () async {
-
                       final remaining = <Map<String, String>>[];
                       for (int i = 0; i < totps.length; i++) {
                         if (i != index) remaining.add(totps[i]);
@@ -240,10 +251,59 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredTotps = totps.where((item) {
+      final platform = item['platform']?.toLowerCase() ?? '';
+      return platform.startsWith(searchQuery.toLowerCase());
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CipherAuth'),
+        title: isSearching
+            ? Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        isSearching = false;
+                        searchQuery = '';
+                      });
+                      searchFocusNode.unfocus();
+                    },
+                  ),
+                  Expanded(
+                    child: TextField(
+                      focusNode: searchFocusNode,
+                      onChanged: (value) {
+                        setState(() {
+                          searchQuery = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search platforms...',
+                        hintStyle: const TextStyle(color: Colors.white70),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.only(left: 8),
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              )
+            : const Text('CipherAuth'),
         actions: [
+          if (!isSearching)
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                setState(() {
+                  isSearching = true;
+                });
+                searchFocusNode.requestFocus();
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () async {
@@ -259,27 +319,32 @@ class HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: totps.isEmpty
-          ? const Center(child: Text('No accounts added'))
-          : ListView.builder(
-              itemCount: totps.length,
-              itemBuilder: (_, i) => tile(i, totps[i]),
+      body: GestureDetector(
+        onTap: () {
+          searchFocusNode.unfocus();
+        },
+        child: Column(
+          children: [
+            Expanded(
+              child: totps.isEmpty
+                  ? const Center(child: Text('No accounts added'))
+                  : filteredTotps.isEmpty
+                  ? const Center(child: Text('No platforms match your search'))
+                  : ListView.builder(
+                      itemCount: filteredTotps.length,
+                      itemBuilder: (_, i) => tile(i, filteredTotps[i]),
+                    ),
             ),
-      floatingActionButton: Stack(
-        children: [
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: selectionMode
-                ? const SizedBox.shrink()
-                : FloatingActionButton(
-                    heroTag: 'add',
-                    onPressed: addAccount,
-                    child: const Icon(Icons.add),
-                  ),
-          ),
-        ],
+          ],
+        ),
       ),
+      floatingActionButton: selectionMode
+          ? null
+          : FloatingActionButton(
+              heroTag: 'add',
+              onPressed: addAccount,
+              child: const Icon(Icons.add),
+            ),
       bottomNavigationBar: selectionMode
           ? BottomAppBar(
               child: Padding(
