@@ -3,6 +3,7 @@ import '../utils/storage.dart';
 import '../utils/export_service.dart';
 import 'reset_password_screen.dart';
 import 'sync_screen.dart';
+import 'view_qr_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -118,14 +119,18 @@ class SettingsScreenState extends State<SettingsScreen> {
               leading: const Icon(Icons.qr_code_2),
               title: const Text('View QR'),
               subtitle: const Text('Scan with any authenticator app'),
-              enabled: false,
-              onTap: null,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ViewQrScreen()),
+                );
+              },
             ),
           ),
           const SizedBox(height: 8),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.download),
+              leading: const Icon(Icons.upload),
               title: const Text('Export Credentials'),
               subtitle: const Text('Export your credentials to a file'),
               onTap: exportCredentials,
