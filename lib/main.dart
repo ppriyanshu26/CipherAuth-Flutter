@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import 'screens/startup_screen.dart';
 import 'utils/storage.dart';
+import 'package:window_manager/window_manager.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+  
+  windowManager.waitUntilReadyToShow().then((_) async {
+    await windowManager.setMinimumSize(const Size(400, 600));
+    await windowManager.show();
+  });
+  
   runApp(const MyApp());
 }
 
