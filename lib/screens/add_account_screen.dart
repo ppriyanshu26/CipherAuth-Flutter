@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../utils/totp_store.dart';
-import 'qr_scan_screen.dart';
 
 class AddAccountScreen extends StatefulWidget {
   const AddAccountScreen({super.key});
@@ -12,17 +13,36 @@ class AddAccountScreen extends StatefulWidget {
 class AddAccountScreenState extends State<AddAccountScreen>
     with SingleTickerProviderStateMixin {
   late TabController tabController;
+  late final MobileScannerController? scannerController;
 
   final platformCtrl = TextEditingController();
   final usernameCtrl = TextEditingController();
   final secretCtrl = TextEditingController();
 
   bool fromQr = false;
+  bool scanned = false;
 
   @override
   void initState() {
     super.initState();
     tabController = TabController(length: 2, vsync: this);
+    if (Platform.isAndroid || Platform.isIOS) {
+      scannerController = MobileScannerController(
+        detectionSpeed: DetectionSpeed.noDuplicates,
+        facing: CameraFacing.back,
+      );
+    } else {
+      scannerController = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      scannerController?.dispose();
+    }
+    tabController.dispose();
+    super.dispose();
   }
 
   String buildTotpUrl({
@@ -81,17 +101,24 @@ class AddAccountScreenState extends State<AddAccountScreen>
     setState(() {});
   }
 
-  Future<void> scanQr() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const QrScanScreen()),
-    );
+  void onDetect(BarcodeCapture capture) async {
+    if (scanned) return;
 
-    if (result != null &&
-        result is String &&
-        result.startsWith('otpauth://')) {
-      populateFromOtpAuth(result);
+    final barcode = capture.barcodes.first;
+    final value = barcode.rawValue;
+
+    if (value == null || !value.startsWith('otpauth://')) return;
+
+    scanned = true;
+
+    if (Platform.isAndroid || Platform.isIOS) {
+      await scannerController?.stop();
     }
+
+    if (!mounted) return;
+    
+    populateFromOtpAuth(value);
+    setState(() {});
   }
 
   Future<void> saveManual() async {
@@ -139,13 +166,31 @@ class AddAccountScreenState extends State<AddAccountScreen>
       body: TabBarView(
         controller: tabController,
         children: [
-          Center(
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Scan QR'),
-              onPressed: scanQr,
+          // Scan QR Tab
+          if (Platform.isAndroid || Platform.isIOS)
+            MobileScanner(
+              controller: scannerController,
+              onDetect: onDetect,
+            )
+          else
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.smartphone,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Use your mobile to scan',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
+              ),
             ),
-          ),
+          // Manual Entry Tab
           Padding(
             padding: const EdgeInsets.all(16),
             child: ListView(
