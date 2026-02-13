@@ -6,9 +6,8 @@ import 'crypto.dart';
 class TotpStore {
   static const storeKey = 'totp_store';
 
-  static String _generateId(String platform, String secret) {
-    final salt = (DateTime.now().millisecondsSinceEpoch / 1000).toString();
-    final input = '$platform$secret$salt';
+  static String generateId(String platform, String username, String secret) {
+    final input = '$platform$username$secret';
     return sha256.convert(input.codeUnits).toString();
   }
 
@@ -58,7 +57,7 @@ class TotpStore {
     }
 
     final newItem = {
-      'id': _generateId(platform, secret),
+      'id': generateId(platform, username, secret),
       'platform': platform,
       'username': username,
       'secretcode': secret,
