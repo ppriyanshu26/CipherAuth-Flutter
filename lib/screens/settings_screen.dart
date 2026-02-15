@@ -47,21 +47,23 @@ class SettingsScreenState extends State<SettingsScreen> {
   Future<void> toggleBiometric(bool value) async {
     if (value) {
       if (RuntimeKey.rawPassword != null) {
-        try {
-          await BiometricService.enableBiometric(RuntimeKey.rawPassword!);
+        final (success, error) = await BiometricService.enableBiometric(
+          RuntimeKey.rawPassword!,
+        );
+        if (!mounted) return;
+        if (success) {
           setState(() => isBiometricEnabled = true);
-          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Biometric unlock enabled'),
               duration: Duration(seconds: 2),
             ),
           );
-        } catch (e) {
-          if (!mounted) return;
+        } else {
+          setState(() => isBiometricEnabled = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to enable biometric: $e'),
+              content: Text(error ?? 'Failed to enable biometric'),
               backgroundColor: Colors.red,
             ),
           );

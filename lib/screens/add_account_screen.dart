@@ -160,7 +160,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
       String? value;
 
       if (Platform.isAndroid || Platform.isIOS) {
-        // Use ML Kit for mobile platforms (optimal performance)
         final inputImage = InputImage.fromFilePath(image.path);
         final barcodeScanner = BarcodeScanner();
 
@@ -177,7 +176,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
 
         value = barcodes.first.rawValue;
       } else {
-        // Use zxing2 for Windows/macOS/Linux
         try {
           value = await QRDecoder.decodeFromFile(image.path);
         } catch (e) {
@@ -203,7 +201,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error scanning image: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error scanning image')));
     }
   }
 
@@ -223,7 +221,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
       body: TabBarView(
         controller: tabController,
         children: [
-          // Scan QR Tab
           if (Platform.isAndroid || Platform.isIOS)
             Stack(
               children: [
@@ -269,7 +266,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
                 ],
               ),
             ),
-          // Manual Entry Tab
           Padding(
             padding: const EdgeInsets.all(16),
             child: ListView(

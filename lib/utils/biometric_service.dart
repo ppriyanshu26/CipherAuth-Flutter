@@ -6,10 +6,10 @@ class BiometricService {
   static const bioKey = 'biometric_enabled';
   static const passKey = 'biometric_password';
 
-  static final _localAuth = LocalAuthentication();
+  static final localAuth = LocalAuthentication();
   static Future<bool> canUseBiometrics() async {
     try {
-      return await _localAuth.canCheckBiometrics;
+      return await localAuth.canCheckBiometrics;
     } catch (_) {
       return false;
     }
@@ -17,7 +17,7 @@ class BiometricService {
 
   static Future<List<BiometricType>> getAvailableBiometrics() async {
     try {
-      return await _localAuth.getAvailableBiometrics();
+      return await localAuth.getAvailableBiometrics();
     } catch (_) {
       return [];
     }
@@ -26,7 +26,7 @@ class BiometricService {
   static Future<(bool authenticated, String? error)>
   authenticateWithError() async {
     try {
-      final result = await _localAuth.authenticate(
+      final result = await localAuth.authenticate(
         localizedReason: 'Unlock CipherAuth with your biometric',
         options: const AuthenticationOptions(
           stickyAuth: true,
@@ -45,9 +45,23 @@ class BiometricService {
     return result;
   }
 
-  static Future<void> enableBiometric(String masterPassword) async {
-    await passStore.write(key: passKey, value: masterPassword);
-    await passStore.write(key: bioKey, value: 'true');
+  static Future<(bool success, String? error)> enableBiometric(
+    String masterPassword,
+  ) async {
+    if (!await canUseBiometrics()) {
+      return (false, 'No biometric authentication available on this device');
+    }
+    final (authenticated, authError) = await authenticateWithError();
+    if (!authenticated) {
+      return (false, authError ?? 'Biometric authentication failed');
+    }
+    try {
+      await passStore.write(key: passKey, value: masterPassword);
+      await passStore.write(key: bioKey, value: 'true');
+      return (true, null);
+    } catch (e) {
+      return (false, 'Failed to enable biometric: ${e.toString()}');
+    }
   }
 
   static Future<void> disableBiometric() async {
