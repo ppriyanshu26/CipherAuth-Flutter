@@ -155,7 +155,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
       } else {
         try {
           value = await QRDecoder.decodeFromFile(image.path)
-              .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 3));
         } catch (_) {}
       }
 
@@ -247,6 +247,9 @@ class AddAccountScreenState extends State<AddAccountScreen>
         title: const Text('Add Account'),
         bottom: TabBar(
           controller: tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(text: 'Scan QR'),
             Tab(text: 'Manual'),
@@ -268,7 +271,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
                     color: Colors.black54,
                     child: const Center(
                       child: CircularProgressIndicator(),
-                    ),
+                      ),
                   ),
                 Positioned(
                   bottom: 16,
@@ -298,6 +301,8 @@ class AddAccountScreenState extends State<AddAccountScreen>
               children: [
                 TextField(
                   controller: platformCtrl,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => saveManual(),
                   decoration: const InputDecoration(
                     labelText: 'Platform',
                     border: OutlineInputBorder(),
@@ -307,6 +312,8 @@ class AddAccountScreenState extends State<AddAccountScreen>
                 TextField(
                   controller: usernameCtrl,
                   readOnly: fromQr,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => saveManual(),
                   decoration: const InputDecoration(
                     labelText: 'Username / Email',
                     border: OutlineInputBorder(),
@@ -316,6 +323,8 @@ class AddAccountScreenState extends State<AddAccountScreen>
                 TextField(
                   controller: secretCtrl,
                   readOnly: fromQr,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => saveManual(),
                   decoration: const InputDecoration(
                     labelText: 'Secret key',
                     border: OutlineInputBorder(),
