@@ -326,6 +326,16 @@ class ViewQrScreenState extends State<ViewQrScreen> {
                 onTap: () {
                   final secretKey = item['secretcode']!;
                   Clipboard.setData(ClipboardData(text: secretKey));
+                  if (!context.mounted) return;
+
+                  final messenger = ScaffoldMessenger.of(context);
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Secret key copied'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(
