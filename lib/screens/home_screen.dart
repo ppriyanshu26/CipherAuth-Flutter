@@ -387,7 +387,7 @@ class HomeScreenState extends State<HomeScreen> {
                     });
                   },
                   decoration: InputDecoration(
-                    hintText: 'Search from ${totps.length} accounts',
+                    hintText: 'Search from ${totps.length} ${totps.length == 1 ? 'account' : 'accounts'}',
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
