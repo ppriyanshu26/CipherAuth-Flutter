@@ -1,16 +1,18 @@
 # CipherAuth 🔐
 
-CipherAuth is a secure, cross-platform TOTP (Time-based One-Time Password) authenticator application designed for simplicity and security. Built with Flutter, it provides a safe vault for your two-factor authentication tokens across iOS and Android platforms.
+CipherAuth is a secure, cross-platform TOTP (Time-based One-Time Password) authenticator application designed for simplicity and security. Built with Flutter, it provides a safe vault for your two-factor authentication tokens across Android and Windows platforms.
 
 ## 📦 Releases
 
-Download the latest version for Android from our [releases page](https://github.com/ppriyanshu26/CipherAuth-Flutter/releases).
+- Download the latest version for Android from the [releases page](https://github.com/ppriyanshu26/CipherAuth-Flutter/releases).
+- Download the latest version for Windows from the [Microsoft Store](https://apps.microsoft.com/detail/9NS2R9NTRF2Z)
 
 ## ✨ Features
 
 - **Encrypted Storage:** All your credentials are encrypted with AES-256.
 - **Modern UI:** Clean, intuitive interface built with Flutter.
-- **Cross-Platform:** Runs seamlessly on iOS and Android.
+- **Biometric Unlock:** Supports Windows Hello and Biometrics to unlock the app.
+- **Cross-Platform:** Runs seamlessly on Android and Windows.
 - **Search:** Quickly find your accounts with the built-in search bar.
 - **QR Code Support:** View and scan QR codes for easy setup.
 - **Export/Import:** Easily backup and restore your credentials.
@@ -19,7 +21,8 @@ Download the latest version for Android from our [releases page](https://github.
 
 ## 🛠️ Development & Compilation
 
-CipherAuth is built with Flutter and can be compiled for any platform (iOS, Android, Web, macOS, Linux, Windows) without any additional code changes.
+CipherAuth is built with Flutter and can be compiled for any platform (iOS, Android, macOS, Linux, Windows) with minimal code changes.
+> **Note:** Contributions for additional platform support are welcome.
 
 ### Running from Source
 
@@ -43,11 +46,19 @@ flutter build apk
 ```
 The compiled APK will be available in the `build/app/outputs/apk/` folder.
 
-#### iOS
+#### Windows
 ```bash
-flutter build ios
+flutter build windows
 ```
-For detailed iOS release instructions, see the [Flutter documentation](https://docs.flutter.dev/deployment/ios).
+The compiled Windows executable will be available in the `build/windows/x64/runner/Release/` folder.
+
+To build an MSIX package:
+```bash
+flutter pub run msix:create
+```
+The generated MSIX package will be available in the `build/windows/x64/runner/Release/` folder.
+
+For detailed windows release instructions, see the [Flutter documentation](https://docs.flutter.dev/deployment/windows).
 
 
 ## ❓ FAQ
@@ -59,7 +70,7 @@ Click on the **"➕"** button and fill in the account details.
 Use the **"📥 Export"** option to download a decrypted version of your credentials. Keep this file safe!
 
 ### Can I use this on different platforms?
-Yes! CipherAuth is built with Flutter, which means you can run it on iOS and Android. Just compile for your desired platform. For desktop platforms like Linux distros, macOS and Windows, [CipherAuth-Python](https://github.com/ppriyanshu26/CipherAuth-Python)
+Yes! CipherAuth is built with Flutter, which means you can run it on Windows and Android. Just compile for your desired platform. 
 
 ### Is my data synced to the cloud?
 No. CipherAuth is designed to be fully offline for maximum privacy. Your data stays on your device. However, you can sync your credentials across multiple devices on the same network using the built-in **Sync** feature (🔃). Devices must have the same master password encryption key to synchronize securely.
