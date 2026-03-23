@@ -42,6 +42,11 @@ This README describes what the app does from the `lib/` layer, how the feature f
 | macOS | No (same as desktop logic) | Yes | Yes (device dependent) |
 | Linux | No (same as desktop logic) | Yes | Usually unavailable; password fallback |
 
+### Capture Privacy Requirement
+
+- iOS should block screenshots and screen recordings for sensitive app screens.
+- iOS should present a blank preview in the app switcher/open-apps view when the app is visible in recents.
+
 ## Contributor Notes: Minimal Changes for iOS, macOS, Linux
 
 Use the same business logic everywhere and only make the minimum platform wiring changes.
@@ -66,7 +71,12 @@ flutter create --platforms=ios,macos,linux .
 - Add `NSCameraUsageDescription` in `ios/Runner/Info.plist`.
 - Add `NSFaceIDUsageDescription` in `ios/Runner/Info.plist`.
 
-5. macOS and Linux expectations:
+5. iOS privacy behavior (required):
+- Keep screenshot blocking enabled.
+- Keep screen-recording blocking enabled.
+- Keep app switcher snapshot obfuscation enabled (blank/hidden preview).
+
+6. macOS and Linux expectations:
 - No live camera QR flow (same as Windows behavior).
 - Biometric support depends on OS/device/plugin support; fallback must remain password.
 
