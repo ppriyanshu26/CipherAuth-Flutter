@@ -2,6 +2,10 @@
 
 CipherAuth is a secure, cross-platform TOTP (Time-based One-Time Password) authenticator application designed for simplicity and security. Built with Flutter, it provides a safe vault for your two-factor authentication tokens across Android and Windows platforms.
 
+> License Model: CipherAuth is source-available software (not open-source). See the [LICENSE](LICENSE) file for usage and redistribution terms.
+>
+> Privacy Policy: See the full policy in [GIST.md](GIST.md).
+
 ## 📦 Releases
 
 - Download the latest version for Android from the [releases page](https://github.com/ppriyanshu26/CipherAuth-Flutter/releases).
@@ -22,7 +26,7 @@ CipherAuth is a secure, cross-platform TOTP (Time-based One-Time Password) authe
 ## 🛠️ Development & Compilation
 
 CipherAuth is built with Flutter and can be compiled for any platform (iOS, Android, macOS, Linux, Windows) with minimal code changes.
-> **Note:** Contributions for additional platform support are welcome.
+> **Note:** Source visibility is provided for transparency and learning. Reuse, redistribution, and derivative standalone releases require prior written permission.
 
 ### Running from Source
 

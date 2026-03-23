@@ -63,6 +63,11 @@ class SupportScreenState extends State<SupportScreen> {
                   ),
                   const SizedBox(height: 12),
                   supportPolicySection(
+                    'License Model',
+                    'CipherAuth is source-available software (not open-source). See the LICENSE file for usage and redistribution terms.',
+                  ),
+                  const SizedBox(height: 12),
+                  supportPolicySection(
                     'Data Storage',
                     'All data is stored locally on your device. The app uses AES-256-GCM encryption for all sensitive information. No cloud upload.',
                   ),
@@ -89,7 +94,27 @@ class SupportScreenState extends State<SupportScreen> {
                   const SizedBox(height: 12),
                   supportPolicySection(
                     'Permissions',
-                    '1. Storage: Used to save exported CSVs to Downloads and to browse QR images when you use the QR import flow; the app never transmits or reads any other files.\n2. Camera: Needed only for scanning QR codes when you add credetials; nothing is stored or shared.\n3. Network access: Required for local sync feature to discover other devices over your LAN and exchange encrypted data; there is no internet upload.',
+                    '1. Storage: Used to save exported CSVs to Downloads and to browse QR images when you use the QR import flow; the app never transmits or reads any other files.\n2. Camera: Needed only for scanning QR codes when you add credentials; nothing is stored or shared.\n3. Network access: Required for local sync feature to discover other devices over your LAN and exchange encrypted data; there is no internet upload.\n4. Biometric auth: Used only if you enable biometric unlock.',
+                  ),
+                  const SizedBox(height: 12),
+                  supportPolicySection(
+                    'Distribution Channels',
+                    'CipherAuth app behavior is the same whether installed from GitHub Releases, Microsoft Store, or Google Play. Store/platform providers may process store-level telemetry under their own privacy policies.',
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Policy Files',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  supportLinkButton(
+                    this,
+                    'https://github.com/ppriyanshu26/CipherAuth-Flutter/blob/main/LICENSE',
+                  ),
+                  const SizedBox(height: 8),
+                  supportLinkButton(
+                    this,
+                    'https://gist.github.com/ppriyanshu26/b9c863813ee032a9ffd9f94ff1f78aee',
                   ),
                   const SizedBox(height: 12),
                   const Text(
@@ -118,7 +143,7 @@ class SupportScreenState extends State<SupportScreen> {
                   ),
                   const SizedBox(height: 12),
                   const SelectableText(
-                    'As everything is stored locally and there is no account system, there are no user obligations or account-related terms. The main responsibility is to keep your master password secure, as it is the key to all your credentials.',
+                    'Source visibility is provided for transparency and learning. Reuse, redistribution, and derivative standalone releases require prior written permission. As everything is stored locally and there is no account system, there are no account-related user obligations. The main responsibility is to keep your master password secure, as it is the key to your credentials.',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ]),
@@ -185,17 +210,17 @@ class SupportScreenState extends State<SupportScreen> {
           Card(
             child: ExpansionTile(
               leading: const Icon(Icons.handshake),
-              title: const Text('Collaborate & Feedback'),
-              subtitle: const Text('Help me develop for other platforms'),
+              title: const Text('Feedback & Licensing'),
+              subtitle: const Text('Suggestions and permission requests'),
               children: [
                 supportTileData([
                   const Text(
-                    'Interested in Contributing?',
+                    'Source-Available Notice',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 12),
                   const SelectableText(
-                    'If you wish to collaborate and develop and test apps on other platforms, you are free to edit and mail your suggestions.\nHere is the github repository for the project:',
+                    'CipherAuth is source-available. You may review the code for transparency and learning, but redistribution, relicensing, or publishing modified builds requires prior written permission.\n\nFor feature requests, bug reports, business licensing, or collaboration inquiries, use the repository and email below:',
                   ),
                   const SizedBox(height: 4),
                   supportLinkButton(
