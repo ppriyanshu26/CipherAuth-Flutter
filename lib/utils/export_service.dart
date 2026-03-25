@@ -1,35 +1,13 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'totp_store.dart';
 
 class ExportService {
   static Future<(bool, String)> exportToCsv() async {
     try {
-      if (Platform.isAndroid) {
-        final status = await Permission.storage.request();
-        if (!status.isGranted) {
-          if (status.isDenied) {
-            return (
-              false,
-              'Storage permission denied. Please allow access in settings.',
-            );
-          } else if (status.isPermanentlyDenied) {
-            return (
-              false,
-              'Storage permission permanently denied. Please enable in app settings.',
-            );
-          }
-          return (false, 'Storage permission required to export.');
-        }
-      } else if (Platform.isIOS) {
-        final status = await Permission.photos.request();
-        if (!status.isGranted && !status.isDenied) {
-          return (false, 'Permission required to export files.');
-        }
-      }
-
       final credentials = await TotpStore.load();
       if (credentials.isEmpty) {
         return (false, 'No credentials to export');
@@ -54,25 +32,57 @@ class ExportService {
           )
           .join('\n');
 
+      final filename = 'CipherAuth.csv';
+      final csvBytes = Uint8List.fromList(utf8.encode(csvContent));
+
+      if (Platform.isAndroid || Platform.isIOS) {
+        final savedLocation = await FilePicker.platform.saveFile(
+          dialogTitle: 'Save CSV Export',
+          fileName: filename,
+          type: FileType.custom,
+          allowedExtensions: ['csv'],
+          bytes: csvBytes,
+        );
+
+        if (savedLocation == null || savedLocation.isEmpty) {
+          return (false, 'Export cancelled');
+        }
+
+        return (true, 'File saved: $savedLocation');
+      }
+
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        final savePath = await FilePicker.platform.saveFile(
+          dialogTitle: 'Save CSV Export',
+          fileName: filename,
+          type: FileType.custom,
+          allowedExtensions: ['csv'],
+        );
+
+        if (savePath == null || savePath.isEmpty) {
+          return (false, 'Export cancelled');
+        }
+
+        final file = File(savePath);
+        await file.writeAsBytes(csvBytes, flush: true);
+        return (true, 'File saved: ${file.path}');
+      }
+
       Directory? directory;
-      String locationName = 'Downloads';
+      String locationName = 'app storage';
       try {
         if (Platform.isAndroid) {
-          final extStorage = await getExternalStorageDirectory();
-          if (extStorage != null) {
-            final publicDownloads = Directory('/storage/emulated/0/Download');
-            if (await publicDownloads.exists()) {
-              directory = publicDownloads;
-              locationName = 'Downloads';
-            } else {
-              directory = await getApplicationDocumentsDirectory();
-              locationName = 'Documents';
-            }
-          }
+          directory =
+              await getExternalStorageDirectory() ??
+              await getApplicationDocumentsDirectory();
+          locationName = 'app storage';
         } else {
           directory = await getDownloadsDirectory();
           if (directory != null) {
             locationName = 'Downloads';
+          } else {
+            directory = await getApplicationDocumentsDirectory();
+            locationName = 'Documents';
           }
         }
       } catch (e) {
@@ -84,16 +94,14 @@ class ExportService {
           locationName = 'temp';
         }
       }
-      if (!await directory!.exists()) {
+      if (!await directory.exists()) {
         await directory.create(recursive: true);
       }
 
-      final filename =
-          'CipherAuth.csv';
       final filepath = File('${directory.path}/$filename');
       await filepath.writeAsString(csvContent, encoding: utf8);
 
-      return (true, 'File saved to $locationName folder');
+      return (true, 'File saved to $locationName: ${filepath.path}');
     } catch (e) {
       return (false, 'Export failed: ${e.toString()}');
     }

@@ -5,7 +5,7 @@ Small map of each utility file.
 - `app_lifecycle_manager.dart`: Handles app foreground/background lifecycle, screenshot protection, and runtime key clearing.
 - `biometric_service.dart`: Biometric availability checks, auth flow, and secure storage of biometric unlock secret.
 - `crypto.dart`: AES-256-GCM encrypt/decrypt helpers using master-password-derived keys.
-- `export_service.dart`: Exports credentials to CSV with platform-aware permission and path handling.
+- `export_service.dart`: Exports credentials to CSV using platform Save As flow (Android, Windows) with a storage-path fallback for unsupported platforms.
 - `import_service.dart`: Parses CSV, filters duplicates, and imports new credentials into the vault.
 - `qr_decoder.dart`: Decodes QR text from image files (desktop/non-MLKit path).
 - `runtime_key.dart`: In-memory holder for current raw master password during app session.

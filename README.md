@@ -71,7 +71,7 @@ For detailed windows release instructions, see the [Flutter documentation](https
 Click on the **"➕"** button and fill in the account details.
 
 ### How do I back up my tokens?
-Use the **"📥 Export"** option to download a decrypted version of your credentials. Keep this file safe!
+Use the **"📥 Export"** option to create a decrypted CSV backup. On Android and desktop, CipherAuth opens a **Save As** dialog so you can choose the folder (for example, Downloads). Keep this file safe.
 
 ### Can I use this on different platforms?
 Yes! CipherAuth is built with Flutter, which means you can run it on Windows and Android. Just compile for your desired platform. 
