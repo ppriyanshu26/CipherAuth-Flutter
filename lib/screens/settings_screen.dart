@@ -147,10 +147,35 @@ class SettingsScreenState extends State<SettingsScreen> {
         return;
       }
 
+      if (result.files.single.path == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to access selected file'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      final importPassword = await _askImportPassword();
+      if (!mounted || importPassword == null) {
+        return;
+      }
+
+      if (importPassword.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Import password is required'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
       final file = File(result.files.single.path!);
-      final (success, message, newCreds) = await ImportService.importFromCsv(
-        file,
-      );
+      final (success, message, newCreds) =
+          await ImportService.importFromEncryptedCsv(file, importPassword);
 
       if (!mounted) return;
 
@@ -189,7 +214,7 @@ class SettingsScreenState extends State<SettingsScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(message),
+            content: Text(message, style: const TextStyle(color: Colors.red)),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -198,6 +223,60 @@ class SettingsScreenState extends State<SettingsScreen> {
       AppLifecycleManager.preventPasswordClear = false;
       AppLifecycleManager.suppressReauthOnResume = false;
     }
+  }
+
+  Future<String?> _askImportPassword() async {
+    final controller = TextEditingController();
+    var isVisible = false;
+
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Enter Import Password'),
+              content: TextField(
+                controller: controller,
+                obscureText: !isVisible,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      isVisible ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setDialogState(() {
+                        isVisible = !isVisible;
+                      });
+                    },
+                  ),
+                ),
+                onSubmitted: (value) => Navigator.pop(context, value),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () =>
+                      Navigator.pop(context, controller.text.trim()),
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      controller.dispose();
+    });
+    return value;
   }
 
   @override

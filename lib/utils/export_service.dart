@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'totp_store.dart';
+import 'runtime_key.dart';
+import 'csv_crypto.dart';
 
 class ExportService {
   static Future<(bool, String)> exportToCsv() async {
@@ -32,8 +34,14 @@ class ExportService {
           )
           .join('\n');
 
-      final filename = 'CipherAuth.csv';
-      final csvBytes = Uint8List.fromList(utf8.encode(csvContent));
+      final password = RuntimeKey.rawPassword;
+      if (password == null || password.isEmpty) {
+        return (false, 'Session password unavailable. Please sign in again.');
+      }
+
+      final encryptedContent = await CsvCrypto.encryptCsv(csvContent, password);
+      final filename = 'CipherAuth_encrypted.csv';
+      final csvBytes = Uint8List.fromList(utf8.encode(encryptedContent));
 
       if (Platform.isAndroid || Platform.isIOS) {
         final savedLocation = await FilePicker.platform.saveFile(
@@ -48,7 +56,7 @@ class ExportService {
           return (false, 'Export cancelled');
         }
 
-        return (true, 'File saved: $savedLocation');
+        return (true, 'File saved successfully');
       }
 
       if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -65,33 +73,27 @@ class ExportService {
 
         final file = File(savePath);
         await file.writeAsBytes(csvBytes, flush: true);
-        return (true, 'File saved: ${file.path}');
+        return (true, 'File saved successfully');
       }
 
       Directory? directory;
-      String locationName = 'app storage';
       try {
         if (Platform.isAndroid) {
           directory =
               await getExternalStorageDirectory() ??
               await getApplicationDocumentsDirectory();
-          locationName = 'app storage';
         } else {
           directory = await getDownloadsDirectory();
           if (directory != null) {
-            locationName = 'Downloads';
           } else {
             directory = await getApplicationDocumentsDirectory();
-            locationName = 'Documents';
           }
         }
       } catch (e) {
         try {
           directory = await getApplicationDocumentsDirectory();
-          locationName = 'Documents';
         } catch (e) {
           directory = await getTemporaryDirectory();
-          locationName = 'temp';
         }
       }
       if (!await directory.exists()) {
@@ -99,9 +101,9 @@ class ExportService {
       }
 
       final filepath = File('${directory.path}/$filename');
-      await filepath.writeAsString(csvContent, encoding: utf8);
+      await filepath.writeAsString(encryptedContent, encoding: utf8);
 
-      return (true, 'File saved to $locationName: ${filepath.path}');
+      return (true, 'File saved successfully');
     } catch (e) {
       return (false, 'Export failed: ${e.toString()}');
     }

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'totp_store.dart';
+import 'csv_crypto.dart';
 
 class ImportService {
   static List<List<String>> parseCsv(String content) {
@@ -43,16 +44,30 @@ class ImportService {
     return rows;
   }
 
-  static Future<(bool, String, List<Map<String, String>>)> importFromCsv(
-    File file,
-  ) async {
+  static Future<(bool, String, List<Map<String, String>>)>
+  importFromEncryptedCsv(File file, String password) async {
     try {
       if (!await file.exists()) {
         return (false, 'File not found', <Map<String, String>>[]);
       }
 
-      final content = await file.readAsString(encoding: utf8);
-      final rows = parseCsv(content);
+      if (password.isEmpty) {
+        return (false, 'Password is required', <Map<String, String>>[]);
+      }
+
+      final encryptedContent = await file.readAsString(encoding: utf8);
+      late final String csvContent;
+      try {
+        csvContent = await CsvCrypto.decryptCsv(encryptedContent, password);
+      } catch (_) {
+        return (
+          false,
+          'Failed to decrypt file. Check password or file format.',
+          <Map<String, String>>[],
+        );
+      }
+
+      final rows = parseCsv(csvContent);
 
       if (rows.isEmpty) {
         return (false, 'CSV file is empty', <Map<String, String>>[]);

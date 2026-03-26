@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../utils/totp_store.dart';
 import '../utils/storage.dart';
-import '../utils/biometric_service.dart';
-import '../utils/runtime_key.dart';
 
 class ViewQrScreen extends StatefulWidget {
   const ViewQrScreen({super.key});
@@ -20,37 +18,7 @@ class ViewQrScreenState extends State<ViewQrScreen> {
   String? selectedIndex;
   bool isLoading = false;
   bool isPasswordVisible = false;
-  bool canUseBiometrics = false;
-  bool isBioEnabled = false;
-  bool isAuthenticating = false;
   String? error;
-
-  @override
-  void initState() {
-    super.initState();
-    startupBiometric();
-  }
-
-  Future<void> startupBiometric() async {
-    await checkBio();
-    if (!mounted) return;
-    if (canUseBiometrics && isBioEnabled) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          bioAuth();
-        }
-      });
-    }
-  }
-
-  Future<void> checkBio() async {
-    final canUse = await BiometricService.canUseBiometrics();
-    final bioEnabled = await BiometricService.isBiometricEnabled();
-    setState(() {
-      canUseBiometrics = canUse;
-      isBioEnabled = bioEnabled;
-    });
-  }
 
   @override
   void dispose() {
@@ -84,46 +52,6 @@ class ViewQrScreenState extends State<ViewQrScreen> {
       setState(() => error = 'Error: ${e.toString()}');
     } finally {
       setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> bioAuth() async {
-    setState(() => isAuthenticating = true);
-    final (authenticated, _) = await BiometricService.authenticateWithError();
-
-    if (!mounted) return;
-    if (authenticated) {
-      final password = await BiometricService.getStoredMasterPassword();
-      if (!mounted) return;
-
-      if (password != null) {
-        RuntimeKey.rawPassword = password;
-        try {
-          final list = await TotpStore.load();
-          setState(() {
-            totps = list;
-            isPasswordVerified = true;
-            isAuthenticating = false;
-            error = null;
-          });
-        } catch (e) {
-          if (!mounted) return;
-          setState(() {
-            isAuthenticating = false;
-            error = 'Error: ${e.toString()}';
-          });
-        }
-      } else {
-        setState(() {
-          isAuthenticating = false;
-          error = 'Biometric password not found. Please use password';
-        });
-      }
-    } else {
-      setState(() {
-        isAuthenticating = false;
-        error = 'Biometric authentication failed';
-      });
     }
   }
 
@@ -201,17 +129,6 @@ class ViewQrScreenState extends State<ViewQrScreen> {
                       : const Text('Verify'),
                 ),
               ),
-              if (canUseBiometrics && isBioEnabled) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: isAuthenticating ? null : bioAuth,
-                    icon: const Icon(Icons.fingerprint),
-                    label: const Text('Try Biometric'),
-                  ),
-                ),
-              ],
             ],
           ),
         ),

@@ -38,7 +38,7 @@ class AboutScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
                   const Text(
-                    'Version 7.0.0',
+                    'Version 7.1.0',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
@@ -139,7 +139,7 @@ class AboutScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Center(
               child: Text(
-                '© 2026 Priyanshu Priyam\nThis app is source-available and available on GitHub.\nFor licensing and contribution inquiries, please contact the developer.',
+                '© 2026 Priyanshu Priyam\nThis app is source-available on GitHub.\nFor licensing and contribution inquiries, please contact the developer.',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
