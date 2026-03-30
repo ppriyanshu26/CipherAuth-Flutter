@@ -68,7 +68,10 @@ class SettingsScreenState extends State<SettingsScreen> {
           setState(() => isBiometricEnabled = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(error ?? 'Failed to enable biometric', style: const TextStyle(color: Colors.red)),
+              content: Text(
+                error ?? 'Failed to enable biometric',
+                style: const TextStyle(color: Colors.red),
+              ),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -90,7 +93,10 @@ class SettingsScreenState extends State<SettingsScreen> {
         setState(() => isBiometricEnabled = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to disable biometric', style: const TextStyle(color: Colors.red)),
+            content: Text(
+              'Failed to disable biometric',
+              style: const TextStyle(color: Colors.red),
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -127,7 +133,10 @@ class SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: TextStyle(color: success ? Colors.green : Colors.red)),
+        content: Text(
+          message,
+          style: TextStyle(color: success ? Colors.green : Colors.red),
+        ),
         duration: const Duration(seconds: 3),
       ),
     );
@@ -160,6 +169,15 @@ class SettingsScreenState extends State<SettingsScreen> {
 
       final importPassword = await askImportPassword();
       if (!mounted || importPassword == null) {
+        if (!mounted) return;
+        if (importPassword == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Password input cancelled', style: TextStyle(color: Colors.red)),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
         return;
       }
 
@@ -206,7 +224,10 @@ class SettingsScreenState extends State<SettingsScreen> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(addMessage, style: TextStyle(color: added ? Colors.green : Colors.red)),
+              content: Text(
+                addMessage,
+                style: TextStyle(color: added ? Colors.green : Colors.red),
+              ),
               duration: const Duration(seconds: 3),
             ),
           );
@@ -291,7 +312,10 @@ class SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Text('Display', style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(
+                    'Display',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 Card(
                   child: ListTile(
@@ -306,7 +330,10 @@ class SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: Text('Security', style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(
+                    'Security',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 Card(
                   child: ListTile(
@@ -337,7 +364,10 @@ class SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: Text('Sync & Share', style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(
+                    'Sync & Share',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 Card(
                   child: ListTile(
@@ -370,13 +400,18 @@ class SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: Text('Backup', style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(
+                    'Backup',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.upload),
                     title: const Text('Export Credentials'),
-                    subtitle: const Text('Export your credentials to a CSV file'),
+                    subtitle: const Text(
+                      'Export your credentials to a CSV file',
+                    ),
                     onTap: exportCredentials,
                   ),
                 ),
@@ -392,7 +427,10 @@ class SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: Text('About', style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(
+                    'About',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 Card(
                   child: ListTile(
