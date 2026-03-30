@@ -170,7 +170,7 @@ class CipherAuthDiscovery {
     final devices = <String, Map<String, dynamic>>{};
 
     try {
-      final localIP = await _getLocalIPForScanning();
+      final localIP = await getLocalIPForScanning();
       if (localIP == null) return [];
 
       final parts = localIP.split('.');
@@ -182,7 +182,7 @@ class CipherAuthDiscovery {
       for (int i = 1; i <= 254; i++) {
         final ip = '$networkPrefix.$i';
         if (ip == localIP) continue;
-        futures.add(_probeDeviceIP(ip, devices));
+        futures.add(probeDeviceIP(ip, devices));
       }
 
       await Future.wait(
@@ -198,7 +198,7 @@ class CipherAuthDiscovery {
     }
   }
 
-  static Future<String?> _getLocalIPForScanning() async {
+  static Future<String?> getLocalIPForScanning() async {
     try {
       final interfaces = await NetworkInterface.list();
       for (final interface in interfaces) {
@@ -219,7 +219,7 @@ class CipherAuthDiscovery {
     return null;
   }
 
-  static Future<void> _probeDeviceIP(
+  static Future<void> probeDeviceIP(
     String ip,
     Map<String, Map<String, dynamic>> devices,
   ) async {

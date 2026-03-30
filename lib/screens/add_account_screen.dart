@@ -8,7 +8,9 @@ import '../utils/totp_store.dart';
 import '../utils/qr_decoder.dart';
 
 class AddAccountScreen extends StatefulWidget {
-  const AddAccountScreen({super.key});
+  final String? initialUrl;
+
+  const AddAccountScreen({super.key, this.initialUrl});
 
   @override
   State<AddAccountScreen> createState() => AddAccountScreenState();
@@ -38,6 +40,16 @@ class AddAccountScreenState extends State<AddAccountScreen>
         detectionSpeed: DetectionSpeed.noDuplicates,
         facing: CameraFacing.back,
       );
+    }
+
+    // Handle deep link intent if provided
+    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+      populateFromOtpAuth(widget.initialUrl!);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && tabController.index != 1) {
+          tabController.animateTo(1);
+        }
+      });
     }
   }
 

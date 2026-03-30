@@ -71,10 +71,12 @@ flutter create --platforms=ios,macos,linux .
 - Add `NSCameraUsageDescription` in `ios/Runner/Info.plist`.
 - Add `NSFaceIDUsageDescription` in `ios/Runner/Info.plist`.
 
-5. iOS privacy behavior (required):
+5. iOS behavior (required):
 - Keep screenshot blocking enabled.
 - Keep screen-recording blocking enabled.
 - Keep app switcher snapshot obfuscation enabled (blank/hidden preview).
+- Register `otpauth://` URL scheme so native camera app can open the app when scanning QR codes.
+- Handle deep links at app launch to parse and import OTPAUTH URLs from QR scans.
 
 6. macOS and Linux expectations:
 - No live camera QR flow (same as Windows behavior).

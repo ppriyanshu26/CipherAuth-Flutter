@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../main.dart';
 import '../utils/totp_store.dart';
 import '../utils/totp.dart';
 import 'add_account_screen.dart';
@@ -35,6 +36,11 @@ class HomeScreenState extends State<HomeScreen> {
         now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       });
     });
+
+    // Check for pending deep link after frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForPendingDeepLink();
+    });
   }
 
   @override
@@ -55,6 +61,36 @@ class HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (_) => const AddAccountScreen()),
     );
     if (changed == true) load();
+  }
+
+  void _checkForPendingDeepLink() {
+    try {
+      // Get the root navigator state to find MyAppState
+      final rootNavigator = Navigator.of(context, rootNavigator: true);
+      final rootContext = rootNavigator.context;
+
+      // Try to find MyAppState in the widget tree
+      final myAppState = rootContext.findAncestorStateOfType<MyAppState>();
+      if (myAppState == null) return;
+
+      // Get pending deep link
+      final pendingUrl = myAppState.takePendingDeepLink();
+      if (pendingUrl == null || pendingUrl.isEmpty) return;
+
+      // Open AddAccountScreen with the pending deep link
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddAccountScreen(initialUrl: pendingUrl),
+        ),
+      ).then((result) {
+        if (result == true) {
+          load();
+        }
+      });
+    } catch (e) {
+      debugPrint('Error checking pending deep link: $e');
+    }
   }
 
   Future<void> deleteSelected() async {

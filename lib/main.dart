@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
+import 'package:app_links/app_links.dart';
 import 'screens/startup_screen.dart';
+import 'screens/add_account_screen.dart';
 import 'utils/storage.dart';
 import 'utils/app_lifecycle_manager.dart';
+import 'utils/runtime_key.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main() async {
@@ -17,7 +20,6 @@ void main() async {
     });
   }
 
-  // Initialize app lifecycle manager for security features
   final lifecycleManager = AppLifecycleManager();
   await lifecycleManager.initialize();
 
@@ -36,12 +38,14 @@ class MyApp extends StatefulWidget {
 class MyAppState extends State<MyApp> {
   ThemeMode themeMode = ThemeMode.light;
   final navigatorKey = GlobalKey<NavigatorState>();
-
+  String?
+  pendingDeepLink; // Store pending deep link to be handled by HomeScreen
   @override
   void initState() {
     super.initState();
     loadTheme();
-    _setupLifecycleCallbacks();
+    setupLifecycleCallbacks();
+    setupDeepLinkListener();
   }
 
   Future<void> loadTheme() async {
@@ -59,16 +63,52 @@ class MyAppState extends State<MyApp> {
     });
   }
 
-  /// Setup lifecycle callbacks for security
-  void _setupLifecycleCallbacks() {
+  void setupLifecycleCallbacks() {
     widget.lifecycleManager.navigatorKey = navigatorKey;
-    widget.lifecycleManager.onAppResumed = _handleAppResumed;
+    widget.lifecycleManager.onAppResumed = handleAppResumed;
   }
 
-  /// Handle when app resumes from background
-  void _handleAppResumed() {
-    debugPrint('Forcing user to re-authenticate');
-    // Navigate back to startup screen which will route to login
+  void setupDeepLinkListener() {
+    final appLinks = AppLinks();
+
+    appLinks
+        .getInitialAppLink()
+        .then((initialAppLink) {
+          if (initialAppLink != null) {
+            handleDeepLink(initialAppLink);
+          }
+        })
+        .catchError((err) {});
+
+    appLinks.uriLinkStream.listen((uri) {
+      handleDeepLink(uri);
+    }, onError: (err) {});
+  }
+
+  void handleDeepLink(Uri uri) {
+    if (uri.scheme == 'otpauth' && uri.host == 'totp') {
+      final otpauthUrl = uri.toString();
+
+      // Check if user is already authenticated (RuntimeKey is set)
+      if (RuntimeKey.rawPassword != null) {
+        // User is logged in, open AddAccountScreen with the deep link
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => AddAccountScreen(initialUrl: otpauthUrl),
+          ),
+        );
+      } else {
+        // User is not logged in, store the deep link to be handled after login
+        pendingDeepLink = otpauthUrl;
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          '/startup',
+          (route) => false,
+        );
+      }
+    }
+  }
+
+  void handleAppResumed() {
     navigatorKey.currentState?.pushNamedAndRemoveUntil(
       '/startup',
       (route) => false,
@@ -79,6 +119,13 @@ class MyAppState extends State<MyApp> {
   void dispose() {
     widget.lifecycleManager.dispose();
     super.dispose();
+  }
+
+  /// Get and clear the pending deep link (returns null if none)
+  String? takePendingDeepLink() {
+    final link = pendingDeepLink;
+    pendingDeepLink = null;
+    return link;
   }
 
   @override

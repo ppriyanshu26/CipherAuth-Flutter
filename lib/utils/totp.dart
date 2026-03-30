@@ -25,11 +25,11 @@ class Totp {
     ((hash[offset + 2] & 0xff) << 8) |
     (hash[offset + 3] & 0xff);
 
-    final otp = binary % _pow10(digits);
+    final otp = binary % pow10(digits);
     return otp.toString().padLeft(digits, '0');
   }
 
-  static int _pow10(int n) {
+  static int pow10(int n) {
     var result = 1;
     for (int i = 0; i < n; i++) {
       result *= 10;

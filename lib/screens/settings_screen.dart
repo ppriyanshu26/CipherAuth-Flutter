@@ -158,7 +158,7 @@ class SettingsScreenState extends State<SettingsScreen> {
         return;
       }
 
-      final importPassword = await _askImportPassword();
+      final importPassword = await askImportPassword();
       if (!mounted || importPassword == null) {
         return;
       }
@@ -225,7 +225,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<String?> _askImportPassword() async {
+  Future<String?> askImportPassword() async {
     final controller = TextEditingController();
     var isVisible = false;
 

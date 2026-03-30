@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const EdgeInsets _supportTilePadding = EdgeInsets.fromLTRB(16, 0, 16, 16);
+const EdgeInsets supportTilePadding = EdgeInsets.fromLTRB(16, 0, 16, 16);
 
 Widget supportTileData(
   List<Widget> children, {
-  EdgeInsets padding = _supportTilePadding,
+  EdgeInsets padding = supportTilePadding,
 }) {
   return Padding(
     padding: padding,
