@@ -42,7 +42,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
       );
     }
 
-    // Handle deep link intent if provided
     if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
       populateFromOtpAuth(widget.initialUrl!);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -166,8 +165,9 @@ class AddAccountScreenState extends State<AddAccountScreen>
         await barcodeScanner.close();
       } else {
         try {
-          value = await QRDecoder.decodeFromFile(image.path)
-          .timeout(const Duration(seconds: 3));
+          value = await QRDecoder.decodeFromFile(
+            image.path,
+          ).timeout(const Duration(seconds: 3));
         } catch (_) {}
       }
 
@@ -281,9 +281,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
                 if (isScanningImage)
                   Container(
                     color: Colors.black54,
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                      ),
+                    child: const Center(child: CircularProgressIndicator()),
                   ),
                 Positioned(
                   bottom: 16,
@@ -320,6 +318,28 @@ class AddAccountScreenState extends State<AddAccountScreen>
                     border: OutlineInputBorder(),
                   ),
                 ),
+                if (fromQr) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: Colors.blue.withValues(alpha: 0.3),
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'ℹ️  The username and secret key are locked to prevent accidental changes. You can only modify the platform name if needed.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: Colors.blue,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: usernameCtrl,

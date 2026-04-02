@@ -7,7 +7,10 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('About CipherAuth'), scrolledUnderElevation: 0),
+      appBar: AppBar(
+        title: const Text('About CipherAuth'),
+        scrolledUnderElevation: 0,
+      ),
       body: Column(
         children: [
           Expanded(
@@ -38,15 +41,35 @@ class AboutScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
                   const Text(
-                    'Version 7.2.1',
+                    'Version 7.2.2',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'CipherAuth is a secure password and authentication manager that helps you store and manage your credentials safely.',
+                    'CipherAuth is a secure local-first authenticator that helps you store and manage your 2FA credentials securely solely on your device.',
                     style: TextStyle(fontSize: 16, height: 1.5),
                     textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: Colors.orange.withValues(alpha: 0.3),
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      '⚠️  Important: Although everything is on your device, if you forget your master password, there is no way to retrieve your encrypted credentials. Please keep your password safe and secure.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.4,
+                        color: Colors.orange,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                   const SizedBox(height: 50),
                   Row(

@@ -37,7 +37,6 @@ class HomeScreenState extends State<HomeScreen> {
       });
     });
 
-    // Check for pending deep link after frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForPendingDeepLink();
     });
@@ -65,19 +64,15 @@ class HomeScreenState extends State<HomeScreen> {
 
   void _checkForPendingDeepLink() {
     try {
-      // Get the root navigator state to find MyAppState
       final rootNavigator = Navigator.of(context, rootNavigator: true);
       final rootContext = rootNavigator.context;
 
-      // Try to find MyAppState in the widget tree
       final myAppState = rootContext.findAncestorStateOfType<MyAppState>();
       if (myAppState == null) return;
 
-      // Get pending deep link
       final pendingUrl = myAppState.takePendingDeepLink();
       if (pendingUrl == null || pendingUrl.isEmpty) return;
 
-      // Open AddAccountScreen with the pending deep link
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -111,7 +106,7 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Color changeColor(int remaining, int period) {
-    final percentage = (remaining / period) * 100;
+    final percentage = (remaining/period)*100;
     if (percentage > 66) {
       return Colors.green;
     } else if (percentage > 33) {
@@ -121,47 +116,68 @@ class HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  late final Map<String, IconData> platformIcons = {
-    'apple': FontAwesomeIcons.apple,
+  late final Map<String, FaIconData> platformIcons = {
+    'airbnb': FontAwesomeIcons.airbnb,
     'amazon web services': FontAwesomeIcons.aws,
+    'amazon pay': FontAwesomeIcons.amazonPay,
     'amazon': FontAwesomeIcons.amazon,
+    'android': FontAwesomeIcons.android,
+    'apple pay': FontAwesomeIcons.applePay,
+    'apple': FontAwesomeIcons.apple,
+    'arch linux': FontAwesomeIcons.archLinux,
     'aws': FontAwesomeIcons.aws,
     'bitbucket': FontAwesomeIcons.bitbucket,
     'brave': FontAwesomeIcons.brave,
-    'chatgpt': FontAwesomeIcons.openai,
+    'chatgpt': FontAwesomeIcons.brave,
+    'chrome': FontAwesomeIcons.chrome,
+    'claude': FontAwesomeIcons.claude,
     'cloudflare': FontAwesomeIcons.cloudflare,
+    'debian': FontAwesomeIcons.debian,
     'discord': FontAwesomeIcons.discord,
+    'docker': FontAwesomeIcons.docker,
     'dropbox': FontAwesomeIcons.dropbox,
     'edge': FontAwesomeIcons.edge,
     'facebook': FontAwesomeIcons.facebook,
+    'fedora': FontAwesomeIcons.fedora,
+    'figma': FontAwesomeIcons.figma,
     'firefox': FontAwesomeIcons.firefox,
     'github': FontAwesomeIcons.github,
     'gitlab': FontAwesomeIcons.gitlab,
+    'git': FontAwesomeIcons.git,
     'google': FontAwesomeIcons.google,
     'instagram': FontAwesomeIcons.instagram,
+    'jenkins': FontAwesomeIcons.jenkins,
+    'kaggle': FontAwesomeIcons.kaggle,
+    'kubernetes': FontAwesomeIcons.kubernetes,
     'linkedin': FontAwesomeIcons.linkedin,
     'meta': FontAwesomeIcons.meta,
     'microsoft': FontAwesomeIcons.microsoft,
     'mozilla': FontAwesomeIcons.firefox,
     'netflix': FontAwesomeIcons.film,
+    'orcid': FontAwesomeIcons.orcid,
     'openai': FontAwesomeIcons.openai,
     'opera': FontAwesomeIcons.opera,
+    'patreon': FontAwesomeIcons.patreon,
     'pinterest': FontAwesomeIcons.pinterest,
     'reddit': FontAwesomeIcons.reddit,
+    'salesforce': FontAwesomeIcons.salesforce,
     'safari': FontAwesomeIcons.safari,
     'signal': FontAwesomeIcons.signal,
     'snapchat': FontAwesomeIcons.snapchat,
     'spotify': FontAwesomeIcons.spotify,
     'steam': FontAwesomeIcons.steam,
+    'skype': FontAwesomeIcons.skype,
     'telegram': FontAwesomeIcons.telegram,
     'twitch': FontAwesomeIcons.twitch,
     'twitter': FontAwesomeIcons.x,
     'whatsapp': FontAwesomeIcons.whatsapp,
+    'windows': FontAwesomeIcons.windows,
     'x': FontAwesomeIcons.x,
     'youtube': FontAwesomeIcons.youtube,
+    'zoom': FontAwesomeIcons.zoom,
   };
 
-  IconData getPlatformIcon(String input) {
+  FaIconData getPlatformIcon(String input) {
     final text = input.toLowerCase().trim();
     for (final key in platformIcons.keys) {
       if (text.contains(key)) {
@@ -173,7 +189,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   String truncate(String text, {int maxLength = 27}) {
     if ((Platform.isAndroid || Platform.isIOS) && text.length > maxLength) {
-      return '${text.substring(0, maxLength - 2)}...';
+      return '${text.substring(0, maxLength-2)}...';
     }
     return text;
   }
@@ -271,7 +287,7 @@ class HomeScreenState extends State<HomeScreen> {
                       });
                     },
                   )
-                : Icon(
+                : FaIcon(
                     getPlatformIcon(item['platform']!),
                     size: 24,
                     color: Colors.orange,
@@ -342,7 +358,7 @@ class HomeScreenState extends State<HomeScreen> {
                     });
                   },
                 )
-              : Icon(
+              : FaIcon(
                   getPlatformIcon(item['platform']!),
                   size: 24,
                   color: Colors.orange,
@@ -423,7 +439,8 @@ class HomeScreenState extends State<HomeScreen> {
                     });
                   },
                   decoration: InputDecoration(
-                    hintText: 'Search from ${totps.length} ${totps.length == 1 ? 'account' : 'accounts'}',
+                    hintText:
+                        'Search from ${totps.length} ${totps.length == 1 ? 'account' : 'accounts'}',
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,

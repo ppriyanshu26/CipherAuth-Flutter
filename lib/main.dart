@@ -39,7 +39,7 @@ class MyAppState extends State<MyApp> {
   ThemeMode themeMode = ThemeMode.light;
   final navigatorKey = GlobalKey<NavigatorState>();
   String?
-  pendingDeepLink; // Store pending deep link to be handled by HomeScreen
+  pendingDeepLink;
   @override
   void initState() {
     super.initState();
@@ -89,16 +89,13 @@ class MyAppState extends State<MyApp> {
     if (uri.scheme == 'otpauth' && uri.host == 'totp') {
       final otpauthUrl = uri.toString();
 
-      // Check if user is already authenticated (RuntimeKey is set)
       if (RuntimeKey.rawPassword != null) {
-        // User is logged in, open AddAccountScreen with the deep link
         navigatorKey.currentState?.push(
           MaterialPageRoute(
             builder: (_) => AddAccountScreen(initialUrl: otpauthUrl),
           ),
         );
       } else {
-        // User is not logged in, store the deep link to be handled after login
         pendingDeepLink = otpauthUrl;
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/startup',
@@ -121,7 +118,6 @@ class MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  /// Get and clear the pending deep link (returns null if none)
   String? takePendingDeepLink() {
     final link = pendingDeepLink;
     pendingDeepLink = null;
