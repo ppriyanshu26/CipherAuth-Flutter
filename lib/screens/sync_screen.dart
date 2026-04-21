@@ -170,8 +170,26 @@ class SyncScreenState extends State<SyncScreen> {
             mergedDeletionLog[k] = (v as num).toInt();
           });
         }
+        final mergedRecycleBinDynamic =
+            result['mergedRecycleBin'] as List<dynamic>?;
+        final mergedRecycleBin = <Map<String, String>>[];
+        if (mergedRecycleBinDynamic != null) {
+          for (final entry in mergedRecycleBinDynamic) {
+            if (entry is Map) {
+              mergedRecycleBin.add(
+                TotpStore.normalizeRecycleBinEntry(
+                  entry.cast<String, dynamic>(),
+                ),
+              );
+            }
+          }
+        }
 
-        await TotpStore.saveAllAndMerge(mergedCredentials, mergedDeletionLog);
+        await TotpStore.saveAllAndMerge(
+          mergedCredentials,
+          mergedDeletionLog,
+          mergedRecycleBin,
+        );
         syncOccurred = true;
       }
       if (!mounted) return;

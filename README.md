@@ -73,6 +73,11 @@ Click on the **"➕"** button and fill in the account details.
 ### How do I back up my tokens?
 Use the **"📥 Export"** option to create a decrypted CSV backup. On Android and desktop, CipherAuth opens a **Save As** dialog so you can choose the folder (for example, Downloads). Keep this file safe.
 
+### How does the Recycle Bin work?
+Deleted credentials are moved to **Recycle Bin** (Settings → Recycle Bin) instead of being removed immediately. You can restore them at any time within **30 days**. After that, they are automatically removed. You can also choose **Delete permanently** from the item menu to remove an entry right away.
+
+**Note:** CipherAuth has no central server to force-delete data across all your devices. A permanent delete only affects the current device. If you later sync with another device that still has that credential (either in the main list or in its Recycle Bin), it can be added back and treated as a fresh entry.
+
 ### Can I use this on different platforms?
 Yes! CipherAuth is built with Flutter, which means you can run it on Windows and Android. Just compile for your desired platform. 
 

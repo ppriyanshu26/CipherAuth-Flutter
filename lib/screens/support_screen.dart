@@ -182,7 +182,16 @@ class SupportScreenState extends State<SupportScreen> {
                   ),
                   const SizedBox(height: 6),
                   const SelectableText(
-                    'A: Use the Add Account flow to save a new credential, and tap and hold on a credential on the home screen to delete it.',
+                    'A: Use the Add Account flow to save a new credential. To delete, tap and hold a credential on the home screen; it is moved to Recycle Bin first. You can restore it within 30 days, or delete it permanently from Settings > Recycle Bin.',
+                  ),
+                  const SizedBox(height: 12),
+                  const SelectableText(
+                    'Q: Is permanent delete applied to all my devices?',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  const SelectableText(
+                    'A: No. CipherAuth has no central server to force-delete entries everywhere. Permanent delete only affects the current device. If another device still has the same credential (in the main list or its Recycle Bin), a later sync can add it back as a fresh entry.',
                   ),
                   const SizedBox(height: 12),
                   const SelectableText(

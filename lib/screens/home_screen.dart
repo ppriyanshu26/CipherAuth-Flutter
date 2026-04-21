@@ -91,22 +91,27 @@ class HomeScreenState extends State<HomeScreen> {
   Future<void> deleteSelected() async {
     if (selected.isEmpty) return;
 
-    final remaining = <Map<String, String>>[];
-    for (int i = 0; i < totps.length; i++) {
-      if (!selected.contains(i)) remaining.add(totps[i]);
+    final ids = <String>[];
+    for (final index in selected) {
+      if (index >= 0 && index < totps.length) {
+        final id = totps[index]['id'] ?? '';
+        if (id.isNotEmpty) {
+          ids.add(id);
+        }
+      }
     }
-
-    await TotpStore.saveAll(remaining);
+    await TotpStore.moveToRecycleBinAndDeleteByIds(ids);
+    final updated = await TotpStore.load();
 
     setState(() {
-      totps = remaining;
+      totps = updated;
       selected.clear();
       selectionMode = false;
     });
   }
 
   Color changeColor(int remaining, int period) {
-    final percentage = (remaining/period)*100;
+    final percentage = (remaining / period) * 100;
     if (percentage > 66) {
       return Colors.green;
     } else if (percentage > 33) {
@@ -189,7 +194,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   String truncate(String text, {int maxLength = 27}) {
     if ((Platform.isAndroid || Platform.isIOS) && text.length > maxLength) {
-      return '${text.substring(0, maxLength-2)}...';
+      return '${text.substring(0, maxLength - 2)}...';
     }
     return text;
   }
@@ -239,15 +244,12 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                   TextButton(
                     onPressed: () async {
-                      final remaining = <Map<String, String>>[];
-                      for (int i = 0; i < totps.length; i++) {
-                        if (i != index) remaining.add(totps[i]);
-                      }
-
-                      await TotpStore.saveAll(remaining);
+                      final id = item['id'] ?? '';
+                      await TotpStore.moveToRecycleBinAndDeleteByIds([id]);
+                      final updated = await TotpStore.load();
 
                       setState(() {
-                        totps = remaining;
+                        totps = updated;
                       });
 
                       if (!mounted) return;
@@ -256,7 +258,7 @@ class HomeScreenState extends State<HomeScreen> {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Credential deleted'),
+                          content: Text('Credential moved to recycle bin'),
                           duration: Duration(seconds: 1),
                         ),
                       );

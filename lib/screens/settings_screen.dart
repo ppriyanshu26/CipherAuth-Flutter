@@ -12,6 +12,7 @@ import 'sync_screen.dart';
 import 'view_qr_screen.dart';
 import 'about_screen.dart';
 import 'support_screen.dart';
+import 'recycle_bin_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -173,7 +174,10 @@ class SettingsScreenState extends State<SettingsScreen> {
         if (importPassword == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Password input cancelled', style: TextStyle(color: Colors.red)),
+              content: Text(
+                'Password input cancelled',
+                style: TextStyle(color: Colors.red),
+              ),
               duration: Duration(seconds: 2),
             ),
           );
@@ -313,7 +317,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
-                    'Display',
+                    'Management',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
@@ -325,6 +329,24 @@ class SettingsScreenState extends State<SettingsScreen> {
                     title: const Text('Theme'),
                     subtitle: Text(isDarkMode ? 'Dark Mode' : 'Light Mode'),
                     onTap: toggleTheme,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.delete_outline),
+                    title: const Text('Recycle Bin'),
+                    subtitle: const Text(
+                      'Manage deleted credentials for up to 30 days',
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RecycleBinScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 16),

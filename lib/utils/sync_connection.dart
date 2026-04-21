@@ -88,14 +88,28 @@ class SyncConnection {
                     remoteDeletionLog[k] = (v as num).toInt();
                   });
                 }
+                final remoteRecycleBin = <Map<String, String>>[];
+                final recycleBinData = message['recycle_bin'] as List<dynamic>?;
+                if (recycleBinData != null) {
+                  for (final entry in recycleBinData) {
+                    if (entry is Map) {
+                      remoteRecycleBin.add(
+                        TotpStore.normalizeRecycleBinEntry(
+                          entry.cast<String, dynamic>(),
+                        ),
+                      );
+                    }
+                  }
+                }
 
                 final localDeletionLog = await TotpStore.getDeletionLog();
+                final localRecycleBin = await TotpStore.getRecycleBin(
+                  purgeExpired: true,
+                );
 
                 final mergedCredentials = mergeCredentials(
                   localCredentials,
                   remoteCredentials.cast<Map<String, dynamic>>(),
-                  localDeletionLog,
-                  remoteDeletionLog,
                 );
                 final mergedDeletionLog = <String, int>{...localDeletionLog};
                 for (final entry in remoteDeletionLog.entries) {
@@ -104,6 +118,10 @@ class SyncConnection {
                     mergedDeletionLog[entry.key] = entry.value;
                   }
                 }
+                final mergedRecycleBin = TotpStore.mergeRecycleBins(
+                  localRecycleBin,
+                  remoteRecycleBin,
+                );
 
                 final mergedJson = jsonEncode(mergedCredentials);
                 final encryptedMergedData = await Crypto.encryptAesWithPassword(
@@ -115,6 +133,7 @@ class SyncConnection {
                   'type': 'MERGED_DATA',
                   'encrypted_data': encryptedMergedData,
                   'deletion_log': mergedDeletionLog,
+                  'recycle_bin': mergedRecycleBin,
                 });
                 socket.write('$mergedMessage\n');
                 await socket.flush();
@@ -125,6 +144,7 @@ class SyncConnection {
                   'success': true,
                   'mergedCredentials': mergedCredentials,
                   'mergedDeletionLog': mergedDeletionLog,
+                  'mergedRecycleBin': mergedRecycleBin,
                 });
               }
             }
@@ -233,18 +253,23 @@ class SyncConnection {
               socket.write('$response\n');
               await socket.flush();
             } else if (type == 'REQUEST_DATA' && passwordMatched) {
-              final credentialsJson = jsonEncode(localCredentials);
+              final latestCredentials = await TotpStore.load();
+              final credentialsJson = jsonEncode(latestCredentials);
               final encryptedData = await Crypto.encryptAesWithPassword(
                 credentialsJson,
                 masterPassword,
               );
 
               final localDeletionLog = await TotpStore.getDeletionLog();
+              final localRecycleBin = await TotpStore.getRecycleBin(
+                purgeExpired: true,
+              );
 
               final response = jsonEncode({
                 'type': 'DATA_RESPONSE',
                 'encrypted_data': encryptedData,
                 'deletion_log': localDeletionLog,
+                'recycle_bin': localRecycleBin,
               });
               socket.write('$response\n');
               await socket.flush();
@@ -265,6 +290,19 @@ class SyncConnection {
                   mergedDeletionLog[k] = (v as num).toInt();
                 });
               }
+              final mergedRecycleBin = <Map<String, String>>[];
+              final recycleBinData = message['recycle_bin'] as List<dynamic>?;
+              if (recycleBinData != null) {
+                for (final entry in recycleBinData) {
+                  if (entry is Map) {
+                    mergedRecycleBin.add(
+                      TotpStore.normalizeRecycleBinEntry(
+                        entry.cast<String, dynamic>(),
+                      ),
+                    );
+                  }
+                }
+              }
 
               final typedMergedCredentials = <Map<String, String>>[];
               for (final cred in mergedCredentials) {
@@ -282,6 +320,7 @@ class SyncConnection {
               await TotpStore.saveAllAndMerge(
                 typedMergedCredentials,
                 mergedDeletionLog,
+                mergedRecycleBin,
               );
 
               onComplete(true, typedMergedCredentials);
@@ -304,26 +343,33 @@ class SyncConnection {
   static List<Map<String, String>> mergeCredentials(
     List<Map<String, String>> localCreds,
     List<Map<String, dynamic>> remoteCreds,
-    Map<String, int> localDeletionLog,
-    Map<String, int> remoteDeletionLog,
   ) {
     final merged = <String, Map<String, String>>{};
     for (final cred in localCreds) {
-      final id = cred['id'];
+      final normalized = TotpStore.normalizeCredential(cred);
+      final id = normalized['id'];
       if (id != null) {
-        merged[id] = Map.from(cred);
+        merged[id] = normalized;
       }
     }
     for (final cred in remoteCreds) {
-      final id = cred['id']?.toString();
+      final normalized = TotpStore.normalizeCredential(cred);
+      final id = normalized['id'];
       if (id != null) {
-        merged[id] = {
-          'id': id,
-          'platform': (cred['platform'] ?? '').toString(),
-          'username': (cred['username'] ?? '').toString(),
-          'secretcode': (cred['secretcode'] ?? '').toString(),
-          'createdAt': (cred['createdAt'] ?? '').toString(),
-        };
+        final existing = merged[id];
+        if (existing == null) {
+          merged[id] = normalized;
+        } else {
+          final existingCreatedAt = TotpStore.parseTimestampToMillis(
+            existing['createdAt'] ?? '',
+          );
+          final incomingCreatedAt = TotpStore.parseTimestampToMillis(
+            normalized['createdAt'] ?? '',
+          );
+          if (incomingCreatedAt > existingCreatedAt) {
+            merged[id] = normalized;
+          }
+        }
       }
     }
 
