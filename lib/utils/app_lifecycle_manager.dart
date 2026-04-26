@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:screen_protector/screen_protector.dart';
+import 'app_flavor.dart';
 import 'runtime_key.dart';
 
 class AppLifecycleManager extends WidgetsBindingObserver {
@@ -22,7 +23,7 @@ class AppLifecycleManager extends WidgetsBindingObserver {
   Future<void> initialize() async {
     WidgetsBinding.instance.addObserver(this);
 
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && !AppFlavorConfig.isSample) {
       try {
         await ScreenProtector.preventScreenshotOn();
         await ScreenProtector.protectDataLeakageOn();

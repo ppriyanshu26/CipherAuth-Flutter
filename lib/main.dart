@@ -5,11 +5,13 @@ import 'screens/startup_screen.dart';
 import 'screens/add_account_screen.dart';
 import 'utils/storage.dart';
 import 'utils/app_lifecycle_manager.dart';
+import 'utils/app_flavor.dart';
 import 'utils/runtime_key.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppFlavorConfig.initialize();
 
   if (Platform.isWindows) {
     await windowManager.ensureInitialized();
@@ -38,8 +40,7 @@ class MyApp extends StatefulWidget {
 class MyAppState extends State<MyApp> {
   ThemeMode themeMode = ThemeMode.light;
   final navigatorKey = GlobalKey<NavigatorState>();
-  String?
-  pendingDeepLink;
+  String? pendingDeepLink;
   @override
   void initState() {
     super.initState();

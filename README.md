@@ -42,6 +42,18 @@ CipherAuth is built with Flutter and can be compiled for any platform (iOS, Andr
    flutter run
    ```
 
+### Running Android Flavors
+
+Use these commands to run the correct Android variant:
+
+```bash
+# Production flavor
+flutter run --flavor prod
+
+# Sample/Test flavor
+flutter run --flavor sample
+```
+
 ### Compiling for Mobile
 
 #### Android
@@ -49,6 +61,18 @@ CipherAuth is built with Flutter and can be compiled for any platform (iOS, Andr
 flutter build apk
 ```
 The compiled APK will be available in the `build/app/outputs/apk/` folder.
+
+To build a specific flavor:
+
+```bash
+# Production flavor
+flutter build apk --flavor prod
+
+# Sample/Test flavor
+flutter build apk --flavor sample
+```
+
+Flavor APK outputs are generated under `build/app/outputs/flutter-apk/`.
 
 #### Windows
 ```bash
@@ -58,7 +82,7 @@ The compiled Windows executable will be available in the `build/windows/x64/runn
 
 To build an MSIX package:
 ```bash
-flutter pub run msix:create
+dart run msix:create
 ```
 The generated MSIX package will be available in the `build/windows/x64/runner/Release/` folder.
 
@@ -76,7 +100,7 @@ Use the **"📥 Export"** option to create a decrypted CSV backup. On Android an
 ### How does the Recycle Bin work?
 Deleted credentials are moved to **Recycle Bin** (Settings → Recycle Bin) instead of being removed immediately. You can restore them at any time within **30 days**. After that, they are automatically removed. You can also choose **Delete permanently** from the item menu to remove an entry right away.
 
-**Note:** CipherAuth has no central server to force-delete data across all your devices. A permanent delete only affects the current device. If you later sync with another device that still has that credential (either in the main list or in its Recycle Bin), it can be added back and treated as a fresh entry.
+> **Note:** CipherAuth has no central server to force-delete data across all your devices. A permanent delete only affects the current device. If you later sync with another device that still has that credential (either in the main list or in its Recycle Bin), it can be added back and treated as a fresh entry.
 
 ### Can I use this on different platforms?
 Yes! CipherAuth is built with Flutter, which means you can run it on Windows and Android. Just compile for your desired platform. 

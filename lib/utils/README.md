@@ -2,6 +2,7 @@
 
 Small map of each utility file.
 
+- `app_flavor.dart`: Detects active app flavor from native code and exposes flavor-specific helpers (for example, sample-mode title/security toggles).
 - `app_lifecycle_manager.dart`: Handles app foreground/background lifecycle, screenshot protection, and runtime key clearing.
 - `biometric_service.dart`: Biometric availability checks, auth flow, and secure storage of biometric unlock secret.
 - `crypto.dart`: AES-256-GCM encrypt/decrypt helpers using master-password-derived keys.
