@@ -8,6 +8,17 @@ import 'runtime_key.dart';
 import 'csv_crypto.dart';
 
 class ExportService {
+  static String _buildDefaultFilename() {
+    final now = DateTime.now();
+    final month = now.month.toString().padLeft(2, '0');
+    final day = now.day.toString().padLeft(2, '0');
+    final hour = now.hour.toString().padLeft(2, '0');
+    final minute = now.minute.toString().padLeft(2, '0');
+    final second = now.second.toString().padLeft(2, '0');
+
+    return 'CipherAuth_${now.year}$month$day$hour$minute$second.csv';
+  }
+
   static Future<(bool, String)> exportToCsv() async {
     try {
       final credentials = await TotpStore.load();
@@ -40,7 +51,9 @@ class ExportService {
       }
 
       final encryptedContent = await CsvCrypto.encryptCsv(csvContent, password);
-      final filename = 'CipherAuth_encrypted.csv';
+      final filename = Platform.isAndroid || Platform.isWindows
+          ? _buildDefaultFilename()
+          : 'CipherAuth.csv';
       final csvBytes = Uint8List.fromList(utf8.encode(encryptedContent));
 
       if (Platform.isAndroid || Platform.isIOS) {

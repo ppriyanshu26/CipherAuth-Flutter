@@ -17,7 +17,6 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   bool obscure1 = true;
   bool obscure2 = true;
   String? error;
-
   Future<void> create() async {
     final p1 = passwordController.text;
     final p2 = confirmController.text;
@@ -26,14 +25,12 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
       setState(() => error = 'Minimum 8 characters');
       return;
     }
-
     if (p1 != p2) {
       setState(() => error = 'Passwords do not match');
       return;
     }
 
     await Storage.saveMasterPassword(p1);
-
     if (!mounted) return;
     Navigator.pushReplacement(
       context,

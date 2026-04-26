@@ -84,7 +84,7 @@ class HomeScreenState extends State<HomeScreen> {
         }
       });
     } catch (e) {
-      debugPrint('Error checking pending deep link: $e');
+      //
     }
   }
 
@@ -399,7 +399,7 @@ class HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CipherAuth'),
+        title: Text("CipherAuth"),
         scrolledUnderElevation: 0,
         actions: [
           IconButton(

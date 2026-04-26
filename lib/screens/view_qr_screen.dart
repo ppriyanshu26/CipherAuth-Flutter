@@ -56,11 +56,26 @@ class ViewQrScreenState extends State<ViewQrScreen> {
   }
 
   String generateOtpauthUrl(Map<String, String> item) {
-    final secret = item['secretcode']!;
-    final username = item['username'] ?? '';
-    final platform = item['platform']!;
+    final secret = item['secretcode']!.replaceAll(' ', '').toUpperCase();
+    final username = (item['username'] ?? '').trim();
+    final platform = item['platform']!.trim();
 
-    return 'otpauth://totp/$platform:$username?secret=$secret&issuer=$platform';
+    final encodedPlatform = Uri.encodeComponent(platform);
+    final encodedUsername = Uri.encodeComponent(username);
+    final label = username.isEmpty
+        ? encodedPlatform
+        : '$encodedPlatform:$encodedUsername';
+    final query = Uri(
+      queryParameters: {
+        'secret': secret,
+        'issuer': platform,
+        'algorithm': 'SHA1',
+        'digits': '6',
+        'period': '30',
+      },
+    ).query;
+
+    return 'otpauth://totp/$label?$query';
   }
 
   @override

@@ -431,11 +431,17 @@ class TotpStore {
     final list = await load();
 
     final uri = Uri.parse(url);
-    final label = uri.pathSegments.last;
+    final rawPath = uri.path;
+    final label = rawPath.startsWith('/') ? rawPath.substring(1) : rawPath;
+    final decodedLabel = Uri.decodeComponent(label).trim();
 
     String username = '';
-    if (label.contains(':')) {
-      username = label.split(':').sublist(1).join(':');
+    if (decodedLabel.contains(':')) {
+      final separator = decodedLabel.indexOf(':');
+      username = decodedLabel.substring(separator + 1).trim();
+    } else {
+      // Account-only labels are valid otpauth format.
+      username = decodedLabel;
     }
 
     final secret = (uri.queryParameters['secret'] ?? '').toUpperCase();

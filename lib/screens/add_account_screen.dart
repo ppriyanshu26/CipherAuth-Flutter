@@ -87,46 +87,42 @@ class AddAccountScreenState extends State<AddAccountScreen>
 
   void populateFromOtpAuth(String url) {
     final uri = Uri.parse(url);
-    final label = uri.pathSegments.last;
+    final rawPath = uri.path;
+    final label = rawPath.startsWith('/') ? rawPath.substring(1) : rawPath;
+    final decodedLabel = Uri.decodeComponent(label).trim();
 
     String platform = '';
     String username = '';
-
-    if (label.contains(':')) {
-      final parts = label.split(':');
-      platform = parts[0];
-      username = parts.sublist(1).join(':');
+    if (decodedLabel.contains(':')) {
+      final separator = decodedLabel.indexOf(':');
+      platform = decodedLabel.substring(0, separator).trim();
+      username = decodedLabel.substring(separator + 1).trim();
     } else {
-      platform = label;
+      username = decodedLabel;
     }
 
-    final issuer = uri.queryParameters['issuer'];
-    if (issuer != null && issuer.isNotEmpty) {
+    final issuer = (uri.queryParameters['issuer'] ?? '').trim();
+    if (issuer.isNotEmpty) {
       platform = issuer;
     }
 
     final secret = uri.queryParameters['secret'] ?? '';
-
     platformCtrl.text = platform;
     usernameCtrl.text = username;
     secretCtrl.text = secret.toUpperCase();
-
     fromQr = true;
   }
 
   void onDetect(BarcodeCapture capture) async {
     if (scanned) return;
-
     final barcode = capture.barcodes.first;
     final value = barcode.rawValue;
 
     if (value == null || !value.startsWith('otpauth://')) return;
-
     scanned = true;
     await scannerController?.stop();
 
     if (!mounted) return;
-
     populateFromOtpAuth(value);
     tabController.animateTo(1);
     setState(() {});
@@ -135,7 +131,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
   Future<void> scanQrFromImage() async {
     try {
       final picker = ImagePicker();
-
       final image = await picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
@@ -143,15 +138,12 @@ class AddAccountScreenState extends State<AddAccountScreen>
       );
 
       if (image == null) return;
-
       setState(() => isScanningImage = true);
 
       String? value;
-
       if (Platform.isAndroid || Platform.isIOS) {
         final inputImage = InputImage.fromFilePath(image.path);
         final barcodeScanner = BarcodeScanner();
-
         try {
           final barcodes = await barcodeScanner
               .processImage(inputImage)
@@ -170,7 +162,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
           ).timeout(const Duration(seconds: 3));
         } catch (_) {}
       }
-
       setState(() => isScanningImage = false);
 
       if (value == null || !value.startsWith('otpauth://')) {
@@ -188,7 +179,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
       }
 
       if (!mounted) return;
-
       populateFromOtpAuth(value);
       tabController.animateTo(1);
       setState(() {});
@@ -196,7 +186,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
       setState(() => isScanningImage = false);
 
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(

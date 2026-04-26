@@ -336,9 +336,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                   child: ListTile(
                     leading: const Icon(Icons.delete_outline),
                     title: const Text('Recycle Bin'),
-                    subtitle: const Text(
-                      'Manage deleted credentials for up to 30 days',
-                    ),
+                    subtitle: const Text('Manage deleted credentials up to 30 days'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -370,9 +368,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                   child: ListTile(
                     leading: const Icon(Icons.fingerprint),
                     title: const Text('Biometrics'),
-                    subtitle: const Text(
-                      'Unlock with your fingerprint or face',
-                    ),
+                    subtitle: const Text('Use your device to unlock'),
                     enabled: canUseBiometric,
                     trailing: Switch(
                       value: isBiometricEnabled,

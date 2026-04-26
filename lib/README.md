@@ -75,6 +75,7 @@ flutter create --platforms=ios,macos,linux .
 - Keep screenshot blocking enabled.
 - Keep screen-recording blocking enabled.
 - Keep app switcher snapshot obfuscation enabled (blank/hidden preview).
+- Match Android CSV export behavior: when the chosen filename already exists, show a Replace/Cancel prompt and overwrite only after explicit user confirmation.
 - Register `otpauth://` URL scheme so native camera app can open the app when scanning QR codes.
 - Handle deep links at app launch to parse and import OTPAUTH URLs from QR scans.
 
