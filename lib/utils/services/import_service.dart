@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
-import 'totp_store.dart';
-import 'csv_crypto.dart';
+import '../crypto/totp_store.dart';
+import '../crypto/csv_crypto.dart';
 
 class ImportService {
   static List<List<String>> parseCsv(String content) {

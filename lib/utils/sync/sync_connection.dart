@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:async';
-import 'crypto.dart';
-import 'totp_store.dart';
+import '../crypto/crypto.dart';
+import '../crypto/totp_store.dart';
 
 class SyncConnection {
   static const int syncPort = 34568;

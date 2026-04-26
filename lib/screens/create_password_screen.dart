@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/storage.dart';
+import '../utils/services/storage_service.dart';
 import 'login_screen.dart';
 
 class CreatePasswordScreen extends StatefulWidget {

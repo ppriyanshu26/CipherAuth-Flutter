@@ -3,10 +3,10 @@ import 'dart:io' show Platform;
 import 'package:app_links/app_links.dart';
 import 'screens/startup_screen.dart';
 import 'screens/add_account_screen.dart';
-import 'utils/storage.dart';
-import 'utils/app_lifecycle_manager.dart';
-import 'utils/app_flavor.dart';
-import 'utils/runtime_key.dart';
+import 'utils/services/storage_service.dart';
+import 'utils/ui/app_lifecycle_manager.dart';
+import 'utils/ui/app_flavor.dart';
+import 'utils/crypto/runtime_key.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main() async {

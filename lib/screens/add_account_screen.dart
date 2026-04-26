@@ -4,8 +4,8 @@ import 'dart:io' show Platform;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
-import '../utils/totp_store.dart';
-import '../utils/qr_decoder.dart';
+import '../utils/crypto/totp_store.dart';
+import '../utils/services/qr_decoder_service.dart';
 
 class AddAccountScreen extends StatefulWidget {
   final String? initialUrl;
@@ -261,37 +261,78 @@ class AddAccountScreenState extends State<AddAccountScreen>
         controller: tabController,
         children: [
           if (Platform.isAndroid || Platform.isIOS)
-            Stack(
-              children: [
-                MobileScanner(
-                  controller: scannerController,
-                  onDetect: onDetect,
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Stack(
+                  children: [
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: 320,
+                            maxHeight: 320,
+                          ),
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: MobileScanner(
+                                controller: scannerController,
+                                onDetect: onDetect,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Align the QR code inside the square',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: scanQrFromImage,
+                          icon: const Icon(Icons.image),
+                          label: const Text('Browse from Device'),
+                        ),
+                      ],
+                    ),
+                    if (isScanningImage)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black54,
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                if (isScanningImage)
-                  Container(
-                    color: Colors.black54,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                Positioned(
-                  bottom: 16,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: ElevatedButton.icon(
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.phone_android_rounded, size: 72),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Use your phone to scan the QR code',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
                       onPressed: scanQrFromImage,
                       icon: const Icon(Icons.image),
                       label: const Text('Browse from Device'),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            )
-          else
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: scanQrFromImage,
-                icon: const Icon(Icons.image),
-                label: const Text('Browse from Device'),
               ),
             ),
           Padding(

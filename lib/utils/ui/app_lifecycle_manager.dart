@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'app_flavor.dart';
-import 'runtime_key.dart';
+import '../crypto/runtime_key.dart';
 
 class AppLifecycleManager extends WidgetsBindingObserver {
   static final AppLifecycleManager inst = AppLifecycleManager._internal();

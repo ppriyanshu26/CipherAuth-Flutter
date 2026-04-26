@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../utils/totp.dart';
-import '../utils/totp_store.dart';
+import '../utils/crypto/totp.dart';
+import '../utils/crypto/totp_store.dart';
 
 class RecycleBinScreen extends StatefulWidget {
   const RecycleBinScreen({super.key});
@@ -157,7 +157,23 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : recycleBinItems.isEmpty
-          ? const Center(child: Text('Recycle bin is empty'))
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.delete_outline_rounded,
+                    size: 72,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Empty recycle bin',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+            )
           : Column(
               children: [
                 Padding(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../utils/storage.dart';
-import '../utils/runtime_key.dart';
-import '../utils/biometric_service.dart';
+import '../utils/services/storage_service.dart';
+import '../utils/crypto/runtime_key.dart';
+import '../utils/services/biometric_service.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});

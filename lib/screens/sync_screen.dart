@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/sync_service.dart';
-import '../utils/sync_connection.dart';
-import '../utils/storage.dart';
-import '../utils/totp_store.dart';
-import '../utils/runtime_key.dart';
+import '../utils/sync/sync_service.dart';
+import '../utils/sync/sync_connection.dart';
+import '../utils/services/storage_service.dart';
+import '../utils/crypto/totp_store.dart';
+import '../utils/crypto/runtime_key.dart';
 
 class SyncScreen extends StatefulWidget {
   const SyncScreen({super.key});

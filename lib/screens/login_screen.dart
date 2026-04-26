@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../utils/storage.dart';
-import '../utils/runtime_key.dart';
-import '../utils/biometric_service.dart';
+import '../utils/services/storage_service.dart';
+import '../utils/crypto/runtime_key.dart';
+import '../utils/services/biometric_service.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -150,7 +150,7 @@ class LoginScreenState extends State<LoginScreen> {
                 child: OutlinedButton.icon(
                   onPressed: isAuthenticating ? null : bioAuth,
                   icon: const Icon(Icons.fingerprint),
-                  label: const Text('Try Biometric'),
+                  label: const Text('Biometric Login'),
                 ),
               ),
             ],

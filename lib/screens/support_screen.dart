@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../utils/support_helpers.dart';
+import '../utils/ui/support_helpers.dart';
 
 class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});

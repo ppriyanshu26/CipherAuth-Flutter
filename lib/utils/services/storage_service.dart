@@ -1,8 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
-import 'crypto.dart';
-import 'totp_store.dart';
+import '../crypto/crypto.dart';
+import '../crypto/totp_store.dart';
 
 class Storage {
   static const pwKey = 'master_password_hash';

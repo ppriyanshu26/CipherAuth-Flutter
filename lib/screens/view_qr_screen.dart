@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../utils/totp_store.dart';
-import '../utils/storage.dart';
+import '../utils/crypto/totp_store.dart';
+import '../utils/services/storage_service.dart';
 
 class ViewQrScreen extends StatefulWidget {
   const ViewQrScreen({super.key});
