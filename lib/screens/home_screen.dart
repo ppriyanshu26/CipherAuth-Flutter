@@ -38,7 +38,7 @@ class HomeScreenState extends State<HomeScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkForPendingDeepLink();
+      checkForPendingDeepLink();
     });
   }
 
@@ -62,11 +62,10 @@ class HomeScreenState extends State<HomeScreen> {
     if (changed == true) load();
   }
 
-  void _checkForPendingDeepLink() {
+  void checkForPendingDeepLink() {
     try {
       final rootNavigator = Navigator.of(context, rootNavigator: true);
       final rootContext = rootNavigator.context;
-
       final myAppState = rootContext.findAncestorStateOfType<MyAppState>();
       if (myAppState == null) return;
 
@@ -90,7 +89,6 @@ class HomeScreenState extends State<HomeScreen> {
 
   Future<void> deleteSelected() async {
     if (selected.isEmpty) return;
-
     final ids = <String>[];
     for (final index in selected) {
       if (index >= 0 && index < totps.length) {
@@ -112,9 +110,9 @@ class HomeScreenState extends State<HomeScreen> {
 
   Color changeColor(int remaining, int period) {
     final percentage = (remaining / period) * 100;
-    if (percentage > 66) {
+    if (percentage > 67) {
       return Colors.green;
-    } else if (percentage > 33) {
+    } else if (percentage > 34) {
       return Colors.orange;
     } else {
       return Colors.red;
@@ -245,6 +243,12 @@ class HomeScreenState extends State<HomeScreen> {
                   TextButton(
                     onPressed: () async {
                       final id = item['id'] ?? '';
+                      if (id.isEmpty) {
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        return;
+                      }
+
                       await TotpStore.moveToRecycleBinAndDeleteByIds([id]);
                       final updated = await TotpStore.load();
 
@@ -256,12 +260,38 @@ class HomeScreenState extends State<HomeScreen> {
                       Navigator.pop(context);
 
                       if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Credential moved to recycle bin'),
-                          duration: Duration(seconds: 1),
+                      final messenger = ScaffoldMessenger.of(context);
+                      messenger.hideCurrentSnackBar();
+                      var undoPressed = false;
+                      Timer? autoCloseTimer;
+                      final deleteSnackBarController = messenger.showSnackBar(
+                        SnackBar(
+                          content: const Text('Credential moved to recycle bin'),
+                          duration: const Duration(seconds: 3),
+                          action: SnackBarAction(
+                            label: 'UNDO',
+                            onPressed: () async {
+                              undoPressed = true;
+                              autoCloseTimer?.cancel();
+                              final restored = await TotpStore.restoreFromRecycleBin(id);
+                              if (!restored || !mounted) return;
+                              await load();
+                              if (!mounted) return;
+                              messenger.hideCurrentSnackBar();
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Credential restored'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       );
+                      autoCloseTimer = Timer(const Duration(seconds: 3), () {
+                        if (!mounted || undoPressed) return;
+                        deleteSnackBarController.close();
+                      });
                     },
                     child: const Text(
                       'Delete',

@@ -101,9 +101,9 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AlertDialog( 
         title: const Text('Delete permanently?'),
-        content: const Text('This action cannot be undone.'),
+        content: const Text('This will remove the credential from this device forever. It cannot be restored after this step.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -111,7 +111,7 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete permanently', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -126,7 +126,7 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Credential deleted permanently'),
+          content: Text('Credential permanently deleted from this device'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -217,7 +217,7 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
                             itemBuilder: (context) => const [
                               PopupMenuItem(
                                 value: 'delete',
-                                child: Text('Delete permanently'),
+                                child: Text('Delete permanently', style: TextStyle(color: Colors.red)),
                               ),
                               PopupMenuItem(
                                 value: 'copy',
