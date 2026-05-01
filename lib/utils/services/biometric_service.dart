@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -7,6 +8,33 @@ class BiometricService {
   static const passKey = 'biometric_password';
 
   static final localAuth = LocalAuthentication();
+
+  static String getBiometricError(dynamic error) {
+    if (error is PlatformException) {
+      final code = error.code.toLowerCase();
+
+      switch (code) {
+        case 'notavailable':
+          return 'Biometric authentication is not available on this device';
+        case 'notsetup':
+          return 'No biometric data (fingerprint/face) is enrolled on this device. Please set up biometrics in your device settings.';
+        case 'nodevicecredential':
+          return 'Device lock (PIN, pattern, or password) is required to use biometric authentication. Please set up a device lock first.';
+        case 'nocredential':
+          return 'No device credentials are set. Please set up a device lock first.';
+        case 'permanentlylockedout':
+          return 'Too many failed biometric attempts. Please try again later.';
+        case 'lockedout':
+          return 'Biometric is temporarily locked. Please try again later.';
+        case 'notavailable_or_notsetup':
+          return 'Biometric data is not set up on this device';
+        default:
+          return error.message ?? 'Biometric authentication failed';
+      }
+    }
+    return error.toString();
+  }
+
   static Future<bool> canUseBiometrics() async {
     try {
       return await localAuth.canCheckBiometrics;
@@ -36,7 +64,7 @@ class BiometricService {
       );
       return (result, null);
     } catch (e) {
-      return (false, e.toString());
+      return (false, getBiometricError(e));
     }
   }
 
@@ -49,7 +77,10 @@ class BiometricService {
     String masterPassword,
   ) async {
     if (!await canUseBiometrics()) {
-      return (false, 'No biometric authentication available on this device');
+      return (
+        false,
+        'No biometric data enrolled. Please set up a fingerprint or face in your device settings, and ensure your device has a lock screen PIN, pattern, or password.',
+      );
     }
     final (authenticated, authError) = await authenticateWithError();
     if (!authenticated) {
@@ -60,7 +91,7 @@ class BiometricService {
       await passStore.write(key: bioKey, value: 'true');
       return (true, null);
     } catch (e) {
-      return (false, 'Failed to enable biometric: ${e.toString()}');
+      return (false, getBiometricError(e));
     }
   }
 
@@ -69,9 +100,7 @@ class BiometricService {
     await passStore.delete(key: passKey);
   }
 
-  static Future<void> updateBiometricPassword(
-    String newPassword,
-  ) async {
+  static Future<void> updateBiometricPassword(String newPassword) async {
     if (await isBiometricEnabled()) {
       await passStore.write(key: passKey, value: newPassword);
     }

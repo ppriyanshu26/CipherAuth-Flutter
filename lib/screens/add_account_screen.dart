@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../utils/crypto/totp_store.dart';
 import '../utils/services/qr_decoder_service.dart';
 
@@ -20,6 +21,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
     with SingleTickerProviderStateMixin {
   late TabController tabController;
   MobileScannerController? scannerController;
+  bool torchEnabled = false;
 
   final platformCtrl = TextEditingController();
   final usernameCtrl = TextEditingController();
@@ -28,6 +30,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
   bool fromQr = false;
   bool scanned = false;
   bool isScanningImage = false;
+  bool cameraPermissionDenied = false;
   String? error;
 
   @override
@@ -40,6 +43,9 @@ class AddAccountScreenState extends State<AddAccountScreen>
         detectionSpeed: DetectionSpeed.noDuplicates,
         facing: CameraFacing.back,
       );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        checkCameraPermission();
+      });
     }
 
     if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
@@ -50,6 +56,30 @@ class AddAccountScreenState extends State<AddAccountScreen>
         }
       });
     }
+  }
+
+  Future<void> checkCameraPermission({bool requestIfDenied = true}) async {
+    if (!(Platform.isAndroid || Platform.isIOS)) return;
+    var status = await Permission.camera.status;
+    if (requestIfDenied && status.isDenied) {
+      status = await Permission.camera.request();
+    }
+    if (!mounted) return;
+    setState(() {
+      cameraPermissionDenied =
+          status.isDenied || status.isPermanentlyDenied || status.isRestricted;
+    });
+  }
+
+  Future<void> openCameraSettings() async {
+    final opened = await openAppSettings();
+    if (!opened || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Enable camera permission in settings, then tap Retry'),
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -126,6 +156,27 @@ class AddAccountScreenState extends State<AddAccountScreen>
     populateFromOtpAuth(value);
     tabController.animateTo(1);
     setState(() {});
+  }
+
+  Future<void> toggleTorch() async {
+    final controller = scannerController;
+    if (controller == null) return;
+
+    try {
+      await controller.toggleTorch();
+      if (!mounted) return;
+      setState(() {
+        torchEnabled = !torchEnabled;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Flashlight is not available on this device'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> scanQrFromImage() async {
@@ -261,56 +312,134 @@ class AddAccountScreenState extends State<AddAccountScreen>
         controller: tabController,
         children: [
           if (Platform.isAndroid || Platform.isIOS)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Stack(
-                  children: [
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: 320,
-                            maxHeight: 320,
+            cameraPermissionDenied
+                ? Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.camera_alt_outlined, size: 72),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Camera permission is disabled',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: MobileScanner(
-                                controller: scannerController,
-                                onDetect: onDetect,
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Enable camera access in settings to scan QR codes.',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: openCameraSettings,
+                            icon: const Icon(Icons.settings),
+                            label: const Text('Open Settings'),
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                checkCameraPermission(requestIfDenied: false),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: scanQrFromImage,
+                            icon: const Icon(Icons.image),
+                            label: const Text('Browse from Device'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Stack(
+                        children: [
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 320,
+                                child: Stack(
+                                  children: [
+                                    ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 320,
+                                        maxHeight: 320,
+                                      ),
+                                      child: AspectRatio(
+                                        aspectRatio: 1,
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          child: MobileScanner(
+                                            controller: scannerController,
+                                            onDetect: onDetect,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 12,
+                                      right: 12,
+                                      child: Material(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.45,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                        child: IconButton(
+                                          tooltip: torchEnabled
+                                              ? 'Turn flashlight off'
+                                              : 'Turn flashlight on',
+                                          onPressed: toggleTorch,
+                                          icon: Icon(
+                                            torchEnabled
+                                                ? Icons.flash_off
+                                                : Icons.flash_on,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Align the QR code inside the square',
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: scanQrFromImage,
+                                icon: const Icon(Icons.image),
+                                label: const Text('Browse from Device'),
+                              ),
+                            ],
+                          ),
+                          if (isScanningImage)
+                            Positioned.fill(
+                              child: Container(
+                                color: Colors.black54,
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Align the QR code inside the square',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: scanQrFromImage,
-                          icon: const Icon(Icons.image),
-                          label: const Text('Browse from Device'),
-                        ),
-                      ],
-                    ),
-                    if (isScanningImage)
-                      Positioned.fill(
-                        child: Container(
-                          color: Colors.black54,
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
+                        ],
                       ),
-                  ],
-                ),
-              ),
-            )
+                    ),
+                  )
           else
             Padding(
               padding: const EdgeInsets.all(24),
@@ -360,7 +489,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
-                      'ℹ️  The username and secret key are locked to prevent accidental changes. You can only modify the platform name if needed.',
+                      'ℹ️  The username and secret key are locked to prevent accidental changes. You can only copy them and modify the platform name if needed.',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.4,
