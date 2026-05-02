@@ -13,7 +13,7 @@ CipherAuth is a secure, cross-platform TOTP (Time-based One-Time Password) authe
 
 ## ✨ Features
 
-- **Encrypted Storage:** All your credentials are encrypted with AES-256.
+- **Encrypted Storage:** All your credentials are encrypted with AES-GCM.
 - **Modern UI:** Clean, intuitive interface built with Flutter.
 - **Biometric Unlock:** Supports Windows Hello and Biometrics to unlock the app.
 - **Cross-Platform:** Runs seamlessly on Android and Windows.

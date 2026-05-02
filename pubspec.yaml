@@ -121,7 +121,7 @@ msix_config:
   publisher_display_name: Priyanshu Priyam
   identity_name: PriyanshuPriyam.CipherAuth
   publisher: CN=535EC210-8E79-4123-A1BC-3B69A02701C8
-  msix_version: 7.4.1.47
+  msix_version: 7.4.1.0
   logo_path: assets/icon/icon.png
   architecture: x64
   store: true
