@@ -14,9 +14,55 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   final passwordController = TextEditingController();
   final confirmController = TextEditingController();
 
+  final _scrollController = ScrollController();
+  final _passwordFocus = FocusNode();
+  final _confirmFocus = FocusNode();
+  final _passwordFieldKey = GlobalKey();
+
   bool obscure1 = true;
   bool obscure2 = true;
   String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordFocus.addListener(_handleFocusChange);
+    _confirmFocus.addListener(_handleFocusChange);
+  }
+
+  void _handleFocusChange() {
+    if (_passwordFocus.hasFocus || _confirmFocus.hasFocus) {
+      _scrollToFirstField();
+    }
+  }
+
+  void _scrollToFirstField() {
+    final fieldContext = _passwordFieldKey.currentContext;
+    if (fieldContext == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(
+        fieldContext,
+        alignment: 0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      final ctx = _passwordFieldKey.currentContext;
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
   Future<void> create() async {
     final p1 = passwordController.text;
     final p2 = confirmController.text;
@@ -48,78 +94,110 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   }
 
   @override
+  void dispose() {
+    passwordController.dispose();
+    confirmController.dispose();
+    _scrollController.dispose();
+    _passwordFocus.dispose();
+    _confirmFocus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
       appBar: appBar(context),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/icon/icon.png', width: 100, height: 100),
-            const SizedBox(height: 12),
-            const Text(
-              'Your Credentials, Your Device. Offline Encrypted and Completely Private',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            controller: _scrollController,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.viewInsetsOf(context).bottom,
             ),
-            const SizedBox(height: 10),
-            const Text(
-              'Keep your password safe. If you forget it, there is no way to recover your data because you are responsible for the safety of your accounts.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.orange,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 32),
-            TextField(
-              controller: passwordController,
-              obscureText: obscure1,
-              onSubmitted: (_) => create(),
-              decoration: InputDecoration(
-                labelText: 'Master Password',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscure1 ? Icons.visibility : Icons.visibility_off,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                mainAxisAlignment: keyboardOpen
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/icon/icon.png', width: 100, height: 100),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Your Credentials, Your Device. Privacy meets Convenience.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
-                  onPressed: () => setState(() => obscure1 = !obscure1),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: confirmController,
-              obscureText: obscure2,
-              onSubmitted: (_) => create(),
-              decoration: InputDecoration(
-                labelText: 'Confirm Password',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscure2 ? Icons.visibility : Icons.visibility_off,
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Keep your password safe. If you forget it, there is no way to recover your data because you are responsible for the safety of your accounts.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  onPressed: () => setState(() => obscure2 = !obscure2),
-                ),
+                  const SizedBox(height: 32),
+                  TextField(
+                    key: _passwordFieldKey,
+                    focusNode: _passwordFocus,
+                    controller: passwordController,
+                    obscureText: obscure1,
+                    onSubmitted: (_) => create(),
+                    decoration: InputDecoration(
+                      labelText: 'Master Password',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscure1 ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () => setState(() => obscure1 = !obscure1),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    focusNode: _confirmFocus,
+                    controller: confirmController,
+                    obscureText: obscure2,
+                    onSubmitted: (_) => create(),
+                    decoration: InputDecoration(
+                      labelText: 'Confirm Password',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscure2 ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () => setState(() => obscure2 = !obscure2),
+                      ),
+                    ),
+                  ),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        error!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: create,
+                      child: const Text('Create'),
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(error!, style: const TextStyle(color: Colors.red)),
-              ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: create,
-                child: const Text('Create'),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

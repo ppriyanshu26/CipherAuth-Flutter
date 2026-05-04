@@ -14,6 +14,11 @@ class LoginScreen extends StatefulWidget {
 
 class LoginScreenState extends State<LoginScreen> {
   final controller = TextEditingController();
+
+  final _scrollController = ScrollController();
+  final _passwordFocus = FocusNode();
+  final _passwordFieldKey = GlobalKey();
+
   bool obscure = true;
   String? error;
   bool canUseBiometrics = false;
@@ -23,7 +28,49 @@ class LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    _passwordFocus.addListener(_handleFocusChange);
     startupBiometric();
+  }
+
+  void _handleFocusChange() {
+    if (_passwordFocus.hasFocus) {
+      _scrollToFirstField();
+    }
+  }
+
+  void _scrollToFirstField() {
+    final fieldContext = _passwordFieldKey.currentContext;
+    if (fieldContext == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(
+        fieldContext,
+        alignment: 0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      final ctx = _passwordFieldKey.currentContext;
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    _scrollController.dispose();
+    _passwordFocus.dispose();
+    super.dispose();
   }
 
   Future<void> startupBiometric() async {
@@ -102,60 +149,86 @@ class LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
-      appBar: AppBar(title: const Text('Login To Your Account'), scrolledUnderElevation: 0),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/icon/icon.png', width: 100, height: 100),
-            const SizedBox(height: 12),
-            const Text(
-              'Your Credentials, Your Device. Offline Encrypted and Completely Private',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      appBar: AppBar(
+        title: const Text('Login To Your Account'),
+        scrolledUnderElevation: 0,
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            controller: _scrollController,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.viewInsetsOf(context).bottom,
             ),
-            const SizedBox(height: 32),
-            TextField(
-              controller: controller,
-              obscureText: obscure,
-              onSubmitted: (_) => login(),
-              decoration: InputDecoration(
-                labelText: 'Master Password',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () => setState(() => obscure = !obscure),
-                ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                mainAxisAlignment: keyboardOpen
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/icon/icon.png', width: 100, height: 100),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Your Credentials, Your Device. Privacy meets Convenience.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 32),
+                  TextField(
+                    key: _passwordFieldKey,
+                    focusNode: _passwordFocus,
+                    controller: controller,
+                    obscureText: obscure,
+                    onSubmitted: (_) => login(),
+                    decoration: InputDecoration(
+                      labelText: 'Master Password',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscure ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () => setState(() => obscure = !obscure),
+                      ),
+                    ),
+                  ),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        error!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: login,
+                      child: const Text('Login'),
+                    ),
+                  ),
+                  if (canUseBiometrics && isBioEnabled) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: isAuthenticating ? null : bioAuth,
+                        icon: const Icon(Icons.fingerprint),
+                        label: const Text('Biometric Login'),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-            if (error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(error!, style: const TextStyle(color: Colors.red)),
-              ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: login,
-                child: const Text('Login'),
-              ),
-            ),
-            if (canUseBiometrics && isBioEnabled) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: isAuthenticating ? null : bioAuth,
-                  icon: const Icon(Icons.fingerprint),
-                  label: const Text('Biometric Login'),
-                ),
-              ),
-            ],
-          ],
-        ),
+          );
+        },
       ),
     );
   }

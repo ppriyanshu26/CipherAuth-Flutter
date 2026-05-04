@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/ui/app_flavor.dart';
 
@@ -7,6 +9,12 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWindows = defaultTargetPlatform == TargetPlatform.windows;
+    final isAndroid = defaultTargetPlatform == TargetPlatform.android;
+    const playStoreUrl =
+        'https://play.google.com/store/apps/details?id=in.ppriyanshu.cipherauth';
+    const msStoreUrl = 'https://apps.microsoft.com/detail/9NS2R9NTRF2Z';
+
     return Scaffold(
       appBar: AppBar(
         title: Text('About ${AppFlavorConfig.aboutTitle}'),
@@ -42,8 +50,11 @@ class AboutScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
                   const Text(
-                    'Version 7.4.3',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    'Version 7.4.4',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -72,6 +83,100 @@ class AboutScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                   ),
+
+                  if (isWindows) ...[
+                    const SizedBox(height: 32),
+                    const Text(
+                      'Install on your Android phone',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/icon/play.png',
+                          width: 40,
+                          height: 40,
+                        ),
+                        const SizedBox(width: 12),
+                        const Flexible(
+                          child: Text(
+                            'Scan this QR to open Google Play',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: QrImageView(
+                        data: playStoreUrl,
+                        version: QrVersions.auto,
+                        size: 200,
+                        embeddedImage: AssetImage('assets/icon/icon.png'),
+                        embeddedImageStyle: QrEmbeddedImageStyle(
+                          size: Size(40, 40),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  if (isAndroid) ...[
+                    const SizedBox(height: 32),
+                    GestureDetector(
+                      onTap: () async {
+                        final uri = Uri.parse(msStoreUrl);
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/icon/store.png',
+                            width: 40,
+                            height: 40,
+                          ),
+                          const SizedBox(width: 12),
+                          const Flexible(
+                            child: Text(
+                              'Get CipherAuth from Microsoft Store',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                                decoration: TextDecoration.underline,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 50),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
