@@ -63,6 +63,16 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
+            const SizedBox(height: 10),
+            const Text(
+              'Keep your password safe. If you forget it, there is no way to recover your data because you are responsible for the safety of your accounts.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.orange,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 32),
             TextField(
               controller: passwordController,
