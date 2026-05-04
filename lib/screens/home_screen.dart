@@ -113,7 +113,7 @@ class HomeScreenState extends State<HomeScreen> {
     if (percentage > 67) {
       return Colors.green;
     } else if (percentage > 34) {
-      return Colors.orange;
+      return Colors.yellow;
     } else {
       return Colors.red;
     }

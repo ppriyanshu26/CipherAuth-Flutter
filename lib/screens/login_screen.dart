@@ -15,9 +15,9 @@ class LoginScreen extends StatefulWidget {
 class LoginScreenState extends State<LoginScreen> {
   final controller = TextEditingController();
 
-  final _scrollController = ScrollController();
-  final _passwordFocus = FocusNode();
-  final _passwordFieldKey = GlobalKey();
+  final scrollController = ScrollController();
+  final passwordFocus = FocusNode();
+  final passwordFieldKey = GlobalKey();
 
   bool obscure = true;
   String? error;
@@ -28,24 +28,23 @@ class LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _passwordFocus.addListener(_handleFocusChange);
+    passwordFocus.addListener(handleFocusChange);
     startupBiometric();
   }
 
-  void _handleFocusChange() {
-    if (_passwordFocus.hasFocus) {
-      _scrollToFirstField();
+  void handleFocusChange() {
+    if (passwordFocus.hasFocus) {
+      scrollToFirstField();
     }
   }
 
-  void _scrollToFirstField() {
-    final fieldContext = _passwordFieldKey.currentContext;
-    if (fieldContext == null) return;
-
+  void scrollToFirstField() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final ctx = passwordFieldKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
       Scrollable.ensureVisible(
-        fieldContext,
+        ctx,
         alignment: 0,
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
@@ -54,8 +53,8 @@ class LoginScreenState extends State<LoginScreen> {
 
     Future.delayed(const Duration(milliseconds: 250), () {
       if (!mounted) return;
-      final ctx = _passwordFieldKey.currentContext;
-      if (ctx == null) return;
+      final ctx = passwordFieldKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
       Scrollable.ensureVisible(
         ctx,
         alignment: 0,
@@ -68,8 +67,8 @@ class LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     controller.dispose();
-    _scrollController.dispose();
-    _passwordFocus.dispose();
+    scrollController.dispose();
+    passwordFocus.dispose();
     super.dispose();
   }
 
@@ -96,6 +95,7 @@ class LoginScreenState extends State<LoginScreen> {
 
   Future<void> bioAuth() async {
     setState(() => isAuthenticating = true);
+    final navigator = Navigator.of(context);
     final (authenticated, _) = await BiometricService.authenticateWithError();
 
     if (!mounted) return;
@@ -105,8 +105,7 @@ class LoginScreenState extends State<LoginScreen> {
 
       if (password != null) {
         RuntimeKey.rawPassword = password;
-        Navigator.pushReplacement(
-          context,
+        navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => HomeScreen(onToggleTheme: widget.onToggleTheme),
           ),
@@ -126,6 +125,7 @@ class LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> login() async {
+    final navigator = Navigator.of(context);
     final ok = await Storage.verifyMasterPassword(controller.text);
     if (!ok) {
       setState(() => error = 'Wrong password');
@@ -134,7 +134,11 @@ class LoginScreenState extends State<LoginScreen> {
 
     RuntimeKey.rawPassword = controller.text;
     if (!mounted) return;
-    navigateToHome();
+    navigator.pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => HomeScreen(onToggleTheme: widget.onToggleTheme),
+      ),
+    );
   }
 
   void navigateToHome() {
@@ -158,7 +162,7 @@ class LoginScreenState extends State<LoginScreen> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            controller: _scrollController,
+            controller: scrollController,
             padding: EdgeInsets.fromLTRB(
               16,
               16,
@@ -181,8 +185,8 @@ class LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 32),
                   TextField(
-                    key: _passwordFieldKey,
-                    focusNode: _passwordFocus,
+                    key: passwordFieldKey,
+                    focusNode: passwordFocus,
                     controller: controller,
                     obscureText: obscure,
                     onSubmitted: (_) => login(),

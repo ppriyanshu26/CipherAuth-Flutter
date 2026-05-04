@@ -14,10 +14,10 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   final passwordController = TextEditingController();
   final confirmController = TextEditingController();
 
-  final _scrollController = ScrollController();
-  final _passwordFocus = FocusNode();
-  final _confirmFocus = FocusNode();
-  final _passwordFieldKey = GlobalKey();
+  final scrollController = ScrollController();
+  final passwordFocus = FocusNode();
+  final confirmFocus = FocusNode();
+  final passwordFieldKey = GlobalKey();
 
   bool obscure1 = true;
   bool obscure2 = true;
@@ -26,24 +26,23 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   @override
   void initState() {
     super.initState();
-    _passwordFocus.addListener(_handleFocusChange);
-    _confirmFocus.addListener(_handleFocusChange);
+    passwordFocus.addListener(handleFocusChange);
+    confirmFocus.addListener(handleFocusChange);
   }
 
-  void _handleFocusChange() {
-    if (_passwordFocus.hasFocus || _confirmFocus.hasFocus) {
-      _scrollToFirstField();
+  void handleFocusChange() {
+    if (passwordFocus.hasFocus || confirmFocus.hasFocus) {
+      scrollToFirstField();
     }
   }
 
-  void _scrollToFirstField() {
-    final fieldContext = _passwordFieldKey.currentContext;
-    if (fieldContext == null) return;
-
+  void scrollToFirstField() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final ctx = passwordFieldKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
       Scrollable.ensureVisible(
-        fieldContext,
+        ctx,
         alignment: 0,
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
@@ -52,8 +51,8 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
 
     Future.delayed(const Duration(milliseconds: 250), () {
       if (!mounted) return;
-      final ctx = _passwordFieldKey.currentContext;
-      if (ctx == null) return;
+      final ctx = passwordFieldKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
       Scrollable.ensureVisible(
         ctx,
         alignment: 0,
@@ -76,10 +75,10 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
       return;
     }
 
+    final navigator = Navigator.of(context);
     await Storage.saveMasterPassword(p1);
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
+    navigator.pushReplacement(
       MaterialPageRoute(
         builder: (_) => LoginScreen(onToggleTheme: widget.onToggleTheme),
       ),
@@ -97,9 +96,9 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   void dispose() {
     passwordController.dispose();
     confirmController.dispose();
-    _scrollController.dispose();
-    _passwordFocus.dispose();
-    _confirmFocus.dispose();
+    scrollController.dispose();
+    passwordFocus.dispose();
+    confirmFocus.dispose();
     super.dispose();
   }
 
@@ -111,7 +110,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            controller: _scrollController,
+            controller: scrollController,
             padding: EdgeInsets.fromLTRB(
               16,
               16,
@@ -144,8 +143,8 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
                   ),
                   const SizedBox(height: 32),
                   TextField(
-                    key: _passwordFieldKey,
-                    focusNode: _passwordFocus,
+                    key: passwordFieldKey,
+                    focusNode: passwordFocus,
                     controller: passwordController,
                     obscureText: obscure1,
                     onSubmitted: (_) => create(),
@@ -162,7 +161,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextField(
-                    focusNode: _confirmFocus,
+                    focusNode: confirmFocus,
                     controller: confirmController,
                     obscureText: obscure2,
                     onSubmitted: (_) => create(),
