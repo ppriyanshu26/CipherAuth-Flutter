@@ -115,6 +115,14 @@ class AddAccountScreenState extends State<AddAccountScreen>
     return cleaned.isNotEmpty && RegExp(r'^[A-Z2-7]+$').hasMatch(cleaned);
   }
 
+  String normalizePlatformName(String input) {
+    final words = input.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
+    return words.map((word) {
+          if (word.length == 1) return word.toUpperCase();
+          return '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}';
+        }).join(' ');
+  }
+
   void populateFromOtpAuth(String url) {
     final uri = Uri.parse(url);
     final rawPath = uri.path;
@@ -249,9 +257,11 @@ class AddAccountScreenState extends State<AddAccountScreen>
   }
 
   Future<void> saveManual() async {
-    final platform = platformCtrl.text.trim();
+    final platform = normalizePlatformName(platformCtrl.text);
     final username = usernameCtrl.text.trim();
     final secret = secretCtrl.text.replaceAll(' ', '').toUpperCase();
+
+    platformCtrl.text = platform;
 
     if (platform.isEmpty) {
       setState(() => error = 'Platform cannot be empty');
@@ -470,6 +480,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
               children: [
                 TextField(
                   controller: platformCtrl,
+                  textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => saveManual(),
                   decoration: const InputDecoration(

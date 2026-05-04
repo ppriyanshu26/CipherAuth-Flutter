@@ -325,7 +325,7 @@ class HomeScreenState extends State<HomeScreen> {
                     color: Colors.orange,
                   ),
             title: Text(
-              truncate(item['platform']!, maxLength: 18),
+              truncate(item['platform']!, maxLength: 16),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             subtitle: Text(
