@@ -13,9 +13,8 @@ class SyncConnection {
     currServer = null;
   }
 
-  static Future<Map<String, dynamic>> sendPasswordHashAndSync(
+  static Future<Map<String, dynamic>> sendSyncAndMerge(
     String deviceIp,
-    String passwordHash,
     String masterPassword,
     List<Map<String, String>> localCredentials,
   ) async {
@@ -25,16 +24,12 @@ class SyncConnection {
         syncPort,
       ).timeout(Duration(seconds: 5));
 
-      final passwordMessage = jsonEncode({
-        'type': 'PASSWORD_HASH',
-        'hash': passwordHash,
-      });
-      socket.write('$passwordMessage\n');
+      final requestMessage = jsonEncode({'type': 'REQUEST_DATA'});
+      socket.write('$requestMessage\n');
       await socket.flush();
 
       final completer = Completer<Map<String, dynamic>>();
       final messageBuffer = <int>[];
-      var receivedPasswordResponse = false;
       var receivedDataResponse = false;
 
       socket.listen(
@@ -50,12 +45,33 @@ class SyncConnection {
               final message = jsonDecode(utf8.decode(messageBytes));
               final type = message['type'] as String?;
 
-              if (!receivedPasswordResponse &&
-                  type == 'PASSWORD_HASH_RESPONSE') {
-                receivedPasswordResponse = true;
+              if (!receivedDataResponse && type == 'DATA_RESPONSE') {
+                receivedDataResponse = true;
                 messageBuffer.clear();
 
-                if (message['hash'] != passwordHash) {
+                final encryptedRemotePayload =
+                    message['encrypted_payload'] as String?;
+                if (encryptedRemotePayload == null ||
+                    encryptedRemotePayload.isEmpty) {
+                  socket.close();
+                  completer.complete({
+                    'success': false,
+                    'reason': 'message_parse_error',
+                  });
+                  return;
+                }
+
+                Map<String, dynamic> remotePayload;
+                try {
+                  final decryptedRemotePayload =
+                      await Crypto.decryptAesWithPassword(
+                        encryptedRemotePayload,
+                        masterPassword,
+                      );
+                  remotePayload =
+                      jsonDecode(decryptedRemotePayload)
+                          as Map<String, dynamic>;
+                } catch (_) {
                   socket.close();
                   completer.complete({
                     'success': false,
@@ -64,32 +80,26 @@ class SyncConnection {
                   return;
                 }
 
-                final requestMessage = jsonEncode({'type': 'REQUEST_DATA'});
-                socket.write('$requestMessage\n');
-                await socket.flush();
-              } else if (receivedPasswordResponse &&
-                  !receivedDataResponse &&
-                  type == 'DATA_RESPONSE') {
-                receivedDataResponse = true;
-                messageBuffer.clear();
-
-                final encryptedRemoteData = message['encrypted_data'] as String;
-                final decryptedRemoteData = await Crypto.decryptAesWithPassword(
-                  encryptedRemoteData,
-                  masterPassword,
-                );
+                final remoteCredentialsDynamic =
+                    remotePayload['credentials'] as List<dynamic>?;
                 final remoteCredentials =
-                    jsonDecode(decryptedRemoteData) as List<dynamic>;
+                    (remoteCredentialsDynamic ?? const <dynamic>[])
+                        .whereType<Map>()
+                        .map((e) => e.cast<String, dynamic>())
+                        .toList();
+
                 final remoteDeletionLog = <String, int>{};
                 final deletionLogData =
-                    message['deletion_log'] as Map<String, dynamic>?;
+                    remotePayload['deletion_log'] as Map<String, dynamic>?;
                 if (deletionLogData != null) {
                   deletionLogData.forEach((k, v) {
                     remoteDeletionLog[k] = (v as num).toInt();
                   });
                 }
+
                 final remoteRecycleBin = <Map<String, String>>[];
-                final recycleBinData = message['recycle_bin'] as List<dynamic>?;
+                final recycleBinData =
+                    remotePayload['recycle_bin'] as List<dynamic>?;
                 if (recycleBinData != null) {
                   for (final entry in recycleBinData) {
                     if (entry is Map) {
@@ -109,7 +119,7 @@ class SyncConnection {
 
                 final mergedCredentials = mergeCredentials(
                   localCredentials,
-                  remoteCredentials.cast<Map<String, dynamic>>(),
+                  remoteCredentials,
                 );
                 final mergedDeletionLog = <String, int>{...localDeletionLog};
                 for (final entry in remoteDeletionLog.entries) {
@@ -123,17 +133,20 @@ class SyncConnection {
                   remoteRecycleBin,
                 );
 
-                final mergedJson = jsonEncode(mergedCredentials);
-                final encryptedMergedData = await Crypto.encryptAesWithPassword(
-                  mergedJson,
-                  masterPassword,
-                );
+                final mergedPayloadJson = jsonEncode({
+                  'credentials': mergedCredentials,
+                  'deletion_log': mergedDeletionLog,
+                  'recycle_bin': mergedRecycleBin,
+                });
+                final encryptedMergedPayload =
+                    await Crypto.encryptAesWithPassword(
+                      mergedPayloadJson,
+                      masterPassword,
+                    );
 
                 final mergedMessage = jsonEncode({
                   'type': 'MERGED_DATA',
-                  'encrypted_data': encryptedMergedData,
-                  'deletion_log': mergedDeletionLog,
-                  'recycle_bin': mergedRecycleBin,
+                  'encrypted_payload': encryptedMergedPayload,
                 });
                 socket.write('$mergedMessage\n');
                 await socket.flush();
@@ -194,9 +207,7 @@ class SyncConnection {
   }
 
   static void startListeningForSync(
-    String passwordHash,
     String masterPassword,
-    List<Map<String, String>> localCredentials,
     Function(bool, List<Map<String, String>>?) onComplete,
   ) {
     stopListening();
@@ -205,13 +216,7 @@ class SyncConnection {
           .then((server) {
             currServer = server;
             server.listen((socket) {
-              handleSyncConnection(
-                socket,
-                passwordHash,
-                masterPassword,
-                localCredentials,
-                onComplete,
-              );
+              handleSyncConnection(socket, masterPassword, onComplete);
             });
           })
           .catchError((e) {});
@@ -220,12 +225,9 @@ class SyncConnection {
 
   static void handleSyncConnection(
     Socket socket,
-    String passwordHash,
     String masterPassword,
-    List<Map<String, String>> localCredentials,
     Function(bool, List<Map<String, String>>?) onComplete,
   ) {
-    bool passwordMatched = false;
     final messageBuffer = <int>[];
 
     socket.listen(
@@ -241,57 +243,67 @@ class SyncConnection {
             final message = jsonDecode(utf8.decode(messageBytes));
             final type = message['type'] as String?;
 
-            if (type == 'PASSWORD_HASH') {
-              final remoteHash = message['hash'];
-              passwordMatched = remoteHash == passwordHash;
-
-              final response = jsonEncode({
-                'type': 'PASSWORD_HASH_RESPONSE',
-                'hash': passwordHash,
-                'match': passwordMatched,
-              });
-              socket.write('$response\n');
-              await socket.flush();
-            } else if (type == 'REQUEST_DATA' && passwordMatched) {
+            if (type == 'REQUEST_DATA') {
               final latestCredentials = await TotpStore.load();
-              final credentialsJson = jsonEncode(latestCredentials);
-              final encryptedData = await Crypto.encryptAesWithPassword(
-                credentialsJson,
-                masterPassword,
-              );
-
               final localDeletionLog = await TotpStore.getDeletionLog();
               final localRecycleBin = await TotpStore.getRecycleBin(
                 purgeExpired: true,
               );
 
-              final response = jsonEncode({
-                'type': 'DATA_RESPONSE',
-                'encrypted_data': encryptedData,
+              final payloadJson = jsonEncode({
+                'credentials': latestCredentials,
                 'deletion_log': localDeletionLog,
                 'recycle_bin': localRecycleBin,
               });
-              socket.write('$response\n');
-              await socket.flush();
-            } else if (type == 'MERGED_DATA' && passwordMatched) {
-              final encryptedMergedData = message['encrypted_data'] as String;
-              final decryptedMergedData = await Crypto.decryptAesWithPassword(
-                encryptedMergedData,
+              final encryptedPayload = await Crypto.encryptAesWithPassword(
+                payloadJson,
                 masterPassword,
               );
+
+              final response = jsonEncode({
+                'type': 'DATA_RESPONSE',
+                'encrypted_payload': encryptedPayload,
+              });
+              socket.write('$response\n');
+              await socket.flush();
+            } else if (type == 'MERGED_DATA') {
+              final encryptedMergedPayload =
+                  message['encrypted_payload'] as String?;
+              if (encryptedMergedPayload == null ||
+                  encryptedMergedPayload.isEmpty) {
+                socket.close();
+                return;
+              }
+
+              Map<String, dynamic> mergedPayload;
+              try {
+                final decryptedMergedPayload =
+                    await Crypto.decryptAesWithPassword(
+                      encryptedMergedPayload,
+                      masterPassword,
+                    );
+                mergedPayload =
+                    jsonDecode(decryptedMergedPayload) as Map<String, dynamic>;
+              } catch (_) {
+                socket.close();
+                return;
+              }
+
               final mergedCredentials =
-                  jsonDecode(decryptedMergedData) as List<dynamic>;
+                  mergedPayload['credentials'] as List<dynamic>?;
 
               final mergedDeletionLog = <String, int>{};
               final deletionLogData =
-                  message['deletion_log'] as Map<String, dynamic>?;
+                  mergedPayload['deletion_log'] as Map<String, dynamic>?;
               if (deletionLogData != null) {
                 deletionLogData.forEach((k, v) {
                   mergedDeletionLog[k] = (v as num).toInt();
                 });
               }
+
               final mergedRecycleBin = <Map<String, String>>[];
-              final recycleBinData = message['recycle_bin'] as List<dynamic>?;
+              final recycleBinData =
+                  mergedPayload['recycle_bin'] as List<dynamic>?;
               if (recycleBinData != null) {
                 for (final entry in recycleBinData) {
                   if (entry is Map) {
@@ -305,7 +317,7 @@ class SyncConnection {
               }
 
               final typedMergedCredentials = <Map<String, String>>[];
-              for (final cred in mergedCredentials) {
+              for (final cred in (mergedCredentials ?? const <dynamic>[])) {
                 if (cred is Map) {
                   typedMergedCredentials.add({
                     'id': (cred['id'] ?? '').toString(),

@@ -183,7 +183,7 @@ class HomeScreenState extends State<HomeScreen> {
   FaIconData getPlatformIcon(String input) {
     final text = input.toLowerCase().trim();
     for (final key in platformIcons.keys) {
-      if (text.contains(key)) {
+      if (text.startsWith(key)) {
         return platformIcons[key]!;
       }
     }

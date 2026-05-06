@@ -127,7 +127,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
                   Image.asset('assets/icon/icon.png', width: 100, height: 100),
                   const SizedBox(height: 12),
                   const Text(
-                    'Your Credentials, Your Device. Privacy meets Convenience.',
+                    'Your Credentials, Your Device. \nPrivacy meets Convenience.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),

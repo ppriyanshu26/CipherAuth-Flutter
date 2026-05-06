@@ -51,29 +51,25 @@ class SyncScreenState extends State<SyncScreen> {
     if (passwordHash != null && mounted) {
       final masterPassword = RuntimeKey.rawPassword;
       if (masterPassword == null) return;
-
-      final localCredentials = await TotpStore.load();
-      SyncConnection.startListeningForSync(
-        passwordHash,
-        masterPassword,
-        localCredentials,
-        (success, mergedCredentials) async {
-          if (!mounted) return;
-          if (success && mergedCredentials != null) {
-            syncOccurred = true;
-            final message = 'SYNC COMPLETE!';
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  message,
-                  style: const TextStyle(color: Colors.green),
-                ),
-                duration: const Duration(seconds: 2),
+      SyncConnection.startListeningForSync(masterPassword, (
+        success,
+        mergedCredentials,
+      ) async {
+        if (!mounted) return;
+        if (success && mergedCredentials != null) {
+          syncOccurred = true;
+          final message = 'SYNC COMPLETE!';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                message,
+                style: const TextStyle(color: Colors.green),
               ),
-            );
-          }
-        },
-      );
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      });
     }
   }
 
@@ -149,9 +145,8 @@ class SyncScreenState extends State<SyncScreen> {
       ),
     );
 
-    final result = await SyncConnection.sendPasswordHashAndSync(
+    final result = await SyncConnection.sendSyncAndMerge(
       deviceIp,
-      passwordHash,
       masterPassword,
       localCredentials,
     );
