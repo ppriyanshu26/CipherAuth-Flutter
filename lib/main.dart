@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 import 'package:app_links/app_links.dart';
 import 'screens/startup_screen.dart';
-import 'screens/add_account_screen.dart';
+import 'screens/authenticatorScreen/add_account_screen.dart';
 import 'utils/services/storage_service.dart';
 import 'utils/ui/app_lifecycle_manager.dart';
 import 'utils/ui/app_flavor.dart';

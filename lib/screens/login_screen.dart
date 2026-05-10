@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/services/storage_service.dart';
 import '../utils/crypto/runtime_key.dart';
 import '../utils/services/biometric_service.dart';
-import 'home_screen.dart';
+import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -107,7 +107,7 @@ class LoginScreenState extends State<LoginScreen> {
         RuntimeKey.rawPassword = password;
         navigator.pushReplacement(
           MaterialPageRoute(
-            builder: (_) => HomeScreen(onToggleTheme: widget.onToggleTheme),
+            builder: (_) => MainScreen(onToggleTheme: widget.onToggleTheme),
           ),
         );
       } else {
@@ -136,7 +136,7 @@ class LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     navigator.pushReplacement(
       MaterialPageRoute(
-        builder: (_) => HomeScreen(onToggleTheme: widget.onToggleTheme),
+        builder: (_) => MainScreen(onToggleTheme: widget.onToggleTheme),
       ),
     );
   }
@@ -146,7 +146,7 @@ class LoginScreenState extends State<LoginScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => HomeScreen(onToggleTheme: widget.onToggleTheme),
+        builder: (_) => MainScreen(onToggleTheme: widget.onToggleTheme),
       ),
     );
   }

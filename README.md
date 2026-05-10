@@ -1,4 +1,4 @@
-# CipherAuth 🔐
+# <img src="assets/icon/icon.png" alt="CipherAuth" width="32" style="vertical-align: middle;" /> CipherAuth 
 
 ![Built with Flutter](https://img.shields.io/badge/Built%20with-Flutter-02569B?logo=flutter&logoColor=white)
 ![Offline First](https://img.shields.io/badge/Offline-First-546E7A)
@@ -11,14 +11,26 @@
 
 CipherAuth is a secure, cross-platform TOTP (Time-based One-Time Password) authenticator application designed for simplicity and security. Built with Flutter, it provides a safe vault for your two-factor authentication tokens across Android and Windows platforms.
 
+**Checkout the app website for details:** [CipherAuth Website](https://cipherauth.ppriyanshu26.online)
+
 > License Model: CipherAuth is source-available software (not open-source). See the [LICENSE](https://github.com/ppriyanshu26/CipherAuth-Flutter/blob/main/LICENSE) file for usage and redistribution terms.
 >
 > Privacy Policy: See the full policy in [GIST File](GIST.md) or in [GitHub Gist](https://gist.github.com/ppriyanshu26/b9c863813ee032a9ffd9f94ff1f78aee).
 
 ## 📦 Releases
+- Use the following buttons to get the app for your device through the official channels:
 
 [![Microsoft Store](https://img.shields.io/badge/Microsoft%20Store-Download-00A4EF?style=for-the-badge&logo=microsoft&logoColor=white)](https://apps.microsoft.com/detail/9NS2R9NTRF2Z)
 [![Google Play](https://img.shields.io/badge/Google%20Play-Download-34A853?style=for-the-badge&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=in.ppriyanshu.cipherauth)
+
+- Alternatively, for Windows devices, you can run the following command for a seamless install.
+
+```powershell
+winget install cipherauth
+
+# Or explicitly with app id:
+winget install --id 9NS2R9NTRF2Z --source msstore
+```
 
 - You can also download the latest versions from the [Releases Page](https://github.com/ppriyanshu26/CipherAuth-Flutter/releases).
 
@@ -103,11 +115,11 @@ For detailed windows release instructions, see the [Flutter documentation](https
 
 ## ❓ FAQ
 
-### How do I add a new account?
-Click on the **"➕"** button and fill in the account details.
+### How do I add and delete an account?
+Click on the **"➕"** button and fill in the account details. For deleting an account, **tap and hold** on the account and press delete. The account is transferred to the recycle bin and stays there fopr upto 30 days. 
 
 ### How do I back up my tokens?
-Use the **"📥 Export"** option to create a decrypted CSV backup. On Android and desktop, CipherAuth opens a **Save As** dialog so you can choose the folder (for example, Downloads). Keep this file safe.
+Use the **"📥 Export"** option to create an encrypted CSV backup. On Android and desktop, CipherAuth opens a **Save As** dialog so you can choose the folder (for example, Downloads). Keep this file safe.
 
 ### How does the Recycle Bin work?
 Deleted credentials are moved to **Recycle Bin** (Settings → Recycle Bin) instead of being removed immediately. You can restore them at any time within **30 days**. After that, they are automatically removed. You can also choose **Delete permanently** from the item menu to remove an entry right away.
@@ -125,4 +137,3 @@ No. CipherAuth is designed to be fully offline for maximum privacy. Your data st
 > **Disclaimer:** CipherAuth uses high-level encryption secured by your Master Password. If you forget your Master Password, **we cannot recover your data**. There are no "backdoors" or password recovery options for your security. Please ensure you keep your password in a safe place.
 
 ---
-*Developed with ❤️ using Flutter.*

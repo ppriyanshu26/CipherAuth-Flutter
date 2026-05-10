@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../utils/crypto/totp.dart';
-import '../utils/crypto/totp_store.dart';
+import '../../utils/crypto/totp.dart';
+import '../../utils/crypto/totp_store.dart';
 
 class RecycleBinScreen extends StatefulWidget {
   const RecycleBinScreen({super.key});

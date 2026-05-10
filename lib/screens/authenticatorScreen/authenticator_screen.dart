@@ -2,22 +2,22 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../main.dart';
-import '../utils/crypto/totp_store.dart';
-import '../utils/crypto/totp.dart';
+import '../../main.dart';
+import '../../utils/crypto/totp_store.dart';
+import '../../utils/crypto/totp.dart';
 import 'add_account_screen.dart';
-import 'settings_screen.dart';
+import '../settingsScreen/settings_screen.dart';
 import 'package:flutter/services.dart';
 
-class HomeScreen extends StatefulWidget {
+class AuthenticatorScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
-  const HomeScreen({super.key, required this.onToggleTheme});
+  const AuthenticatorScreen({super.key, required this.onToggleTheme});
 
   @override
-  State<HomeScreen> createState() => HomeScreenState();
+  State<AuthenticatorScreen> createState() => AuthenticatorScreenState();
 }
 
-class HomeScreenState extends State<HomeScreen> {
+class AuthenticatorScreenState extends State<AuthenticatorScreen> {
   List<Map<String, String>> totps = [];
   Set<int> selected = {};
   bool selectionMode = false;
@@ -429,7 +429,7 @@ class HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("CipherAuth"),
+        title: const Text("Authenticator"),
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
@@ -503,6 +503,7 @@ class HomeScreenState extends State<HomeScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: addAccount,
         backgroundColor: Colors.orange.withValues(alpha: 0.5),
         child: const Icon(Icons.add),

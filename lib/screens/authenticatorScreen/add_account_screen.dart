@@ -5,8 +5,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../utils/crypto/totp_store.dart';
-import '../utils/services/qr_decoder_service.dart';
+import '../../utils/crypto/totp_store.dart';
+import '../../utils/services/qr_decoder_service.dart';
 
 class AddAccountScreen extends StatefulWidget {
   final String? initialUrl;
@@ -74,12 +74,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
   Future<void> openCameraSettings() async {
     final opened = await openAppSettings();
     if (!opened || !mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Enable camera permission in settings, then tap Retry'),
-        duration: Duration(seconds: 3),
-      ),
-    );
   }
 
   @override
@@ -349,13 +343,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
                             onPressed: openCameraSettings,
                             icon: const Icon(Icons.settings),
                             label: const Text('Open Settings'),
-                          ),
-                          const SizedBox(height: 8),
-                          OutlinedButton.icon(
-                            onPressed: () =>
-                                checkCameraPermission(requestIfDenied: false),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
