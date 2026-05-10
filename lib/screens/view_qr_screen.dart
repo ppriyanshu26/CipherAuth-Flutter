@@ -91,7 +91,7 @@ class ViewQrScreenState extends State<ViewQrScreen> {
               const Text(
                 'This app is developed keeping privacy in mind, be sure with who you share the QR codes, it is advisable to use the sync feature to securely sync with your devices',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.orange),
               ),
               const SizedBox(height: 24),
               const Text(

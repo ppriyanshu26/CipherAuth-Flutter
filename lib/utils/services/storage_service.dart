@@ -1,35 +1,32 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
 import '../crypto/crypto.dart';
 import '../crypto/totp_store.dart';
 
 class Storage {
-  static const pwKey = 'master_password_hash';
   static const darkKey = 'dark_mode';
 
   static Future<void> saveMasterPassword(String password) async {
     final prefs = await SharedPreferences.getInstance();
-    final hash = sha256.convert(utf8.encode(password)).toString();
-    await prefs.setString(pwKey, hash);
+    final encrypted = await Crypto.encryptAesWithPassword('[]', password);
+    await prefs.setString(TotpStore.storeKey, encrypted);
   }
 
   static Future<bool> verifyMasterPassword(String password) async {
     final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getString(pwKey);
-    if (stored == null) return false;
-    final hash = sha256.convert(utf8.encode(password)).toString();
-    return stored == hash;
+    final stored = prefs.getString(TotpStore.storeKey);
+    if (stored == null || stored.isEmpty) return false;
+    try {
+      await Crypto.decryptAesWithPassword(stored, password);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<bool> hasMasterPassword() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey(pwKey);
-  }
-
-  static Future<String?> getStoredPassword() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(pwKey);
+    final stored = prefs.getString(TotpStore.storeKey);
+    return stored != null && stored.isNotEmpty;
   }
 
   static Future<void> setDarkMode(bool value) async {
@@ -49,20 +46,30 @@ class Storage {
     try {
       final prefs = await SharedPreferences.getInstance();
       final encryptedStore = prefs.getString(TotpStore.storeKey);
-      String decrypted = '';
+      String decryptedStore = '[]';
       if (encryptedStore != null && encryptedStore.isNotEmpty) {
-        decrypted = await Crypto.decryptAesWithPassword(
+        decryptedStore = await Crypto.decryptAesWithPassword(
           encryptedStore,
           oldPassword,
         );
       }
-      await saveMasterPassword(newPassword);
-      if (decrypted.isNotEmpty) {
-        final reEncrypted = await Crypto.encryptAesWithPassword(
-          decrypted,
+      final reEncryptedStore = await Crypto.encryptAesWithPassword(
+        decryptedStore,
+        newPassword,
+      );
+      await prefs.setString(TotpStore.storeKey, reEncryptedStore);
+
+      final encryptedRecycle = prefs.getString(TotpStore.recycleBinKey);
+      if (encryptedRecycle != null && encryptedRecycle.isNotEmpty) {
+        final decryptedRecycle = await Crypto.decryptAesWithPassword(
+          encryptedRecycle,
+          oldPassword,
+        );
+        final reEncryptedRecycle = await Crypto.encryptAesWithPassword(
+          decryptedRecycle,
           newPassword,
         );
-        await prefs.setString(TotpStore.storeKey, reEncrypted);
+        await prefs.setString(TotpStore.recycleBinKey, reEncryptedRecycle);
       }
     } catch (e) {
       rethrow;

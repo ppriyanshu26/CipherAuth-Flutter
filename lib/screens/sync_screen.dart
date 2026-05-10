@@ -47,8 +47,8 @@ class SyncScreenState extends State<SyncScreen> {
   }
 
   void initializeListening() async {
-    final passwordHash = await Storage.getStoredPassword();
-    if (passwordHash != null && mounted) {
+    final hasPass = await Storage.hasMasterPassword();
+    if (hasPass && mounted) {
       final masterPassword = RuntimeKey.rawPassword;
       if (masterPassword == null) return;
       SyncConnection.startListeningForSync(masterPassword, (
@@ -110,8 +110,8 @@ class SyncScreenState extends State<SyncScreen> {
   }
 
   Future<void> connectToDevice(String deviceIp, String deviceName) async {
-    final passwordHash = await Storage.getStoredPassword();
-    if (passwordHash == null) {
+    final hasPass = await Storage.hasMasterPassword();
+    if (!hasPass) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
