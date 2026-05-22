@@ -1,13 +1,21 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../utils/crypto/password_store.dart';
 import 'add_password_screen.dart';
-import 'password_details_screen.dart';
 import '../settingsScreen/settings_screen.dart';
+import 'password_flip_card.dart';
 
 class PasswordManagerScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
-  const PasswordManagerScreen({super.key, required this.onToggleTheme});
+  final ValueNotifier<int> refreshNotifier;
+
+  const PasswordManagerScreen({
+    super.key,
+    required this.onToggleTheme,
+    required this.refreshNotifier,
+  });
 
   @override
   State<PasswordManagerScreen> createState() => PasswordManagerScreenState();
@@ -18,14 +26,87 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
   String searchQuery = '';
   late FocusNode searchFocusNode = FocusNode();
 
+  late final Map<String, FaIconData> platformIcons = {
+    'airbnb': FontAwesomeIcons.airbnb,
+    'amazon web services': FontAwesomeIcons.aws,
+    'amazon pay': FontAwesomeIcons.amazonPay,
+    'amazon': FontAwesomeIcons.amazon,
+    'android': FontAwesomeIcons.android,
+    'apple pay': FontAwesomeIcons.applePay,
+    'apple': FontAwesomeIcons.apple,
+    'arch linux': FontAwesomeIcons.archLinux,
+    'aws': FontAwesomeIcons.aws,
+    'bitbucket': FontAwesomeIcons.bitbucket,
+    'brave': FontAwesomeIcons.brave,
+    'chatgpt': FontAwesomeIcons.brave,
+    'chrome': FontAwesomeIcons.chrome,
+    'claude': FontAwesomeIcons.claude,
+    'cloudflare': FontAwesomeIcons.cloudflare,
+    'debian': FontAwesomeIcons.debian,
+    'discord': FontAwesomeIcons.discord,
+    'docker': FontAwesomeIcons.docker,
+    'dropbox': FontAwesomeIcons.dropbox,
+    'edge': FontAwesomeIcons.edge,
+    'facebook': FontAwesomeIcons.facebook,
+    'fedora': FontAwesomeIcons.fedora,
+    'figma': FontAwesomeIcons.figma,
+    'firefox': FontAwesomeIcons.firefox,
+    'github': FontAwesomeIcons.github,
+    'gitlab': FontAwesomeIcons.gitlab,
+    'git': FontAwesomeIcons.git,
+    'google': FontAwesomeIcons.google,
+    'instagram': FontAwesomeIcons.instagram,
+    'jenkins': FontAwesomeIcons.jenkins,
+    'kaggle': FontAwesomeIcons.kaggle,
+    'kubernetes': FontAwesomeIcons.kubernetes,
+    'linkedin': FontAwesomeIcons.linkedin,
+    'meta': FontAwesomeIcons.meta,
+    'microsoft': FontAwesomeIcons.microsoft,
+    'mozilla': FontAwesomeIcons.firefox,
+    'netflix': FontAwesomeIcons.film,
+    'orcid': FontAwesomeIcons.orcid,
+    'openai': FontAwesomeIcons.openai,
+    'opera': FontAwesomeIcons.opera,
+    'patreon': FontAwesomeIcons.patreon,
+    'pinterest': FontAwesomeIcons.pinterest,
+    'reddit': FontAwesomeIcons.reddit,
+    'salesforce': FontAwesomeIcons.salesforce,
+    'safari': FontAwesomeIcons.safari,
+    'signal': FontAwesomeIcons.signal,
+    'snapchat': FontAwesomeIcons.snapchat,
+    'spotify': FontAwesomeIcons.spotify,
+    'steam': FontAwesomeIcons.steam,
+    'skype': FontAwesomeIcons.skype,
+    'telegram': FontAwesomeIcons.telegram,
+    'twitch': FontAwesomeIcons.twitch,
+    'twitter': FontAwesomeIcons.x,
+    'whatsapp': FontAwesomeIcons.whatsapp,
+    'windows': FontAwesomeIcons.windows,
+    'x': FontAwesomeIcons.x,
+    'youtube': FontAwesomeIcons.youtube,
+    'zoom': FontAwesomeIcons.zoom,
+  };
+
+  FaIconData getPlatformIcon(String input) {
+    final text = input.toLowerCase().trim();
+    for (final key in platformIcons.keys) {
+      if (text.startsWith(key)) {
+        return platformIcons[key]!;
+      }
+    }
+    return FontAwesomeIcons.globe;
+  }
+
   @override
   void initState() {
     super.initState();
     load();
+    widget.refreshNotifier.addListener(load);
   }
 
   @override
   void dispose() {
+    widget.refreshNotifier.removeListener(load);
     searchFocusNode.dispose();
     super.dispose();
   }
@@ -42,15 +123,15 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
         builder: (_) => AddPasswordScreen(existingPassword: existingItem),
       ),
     );
-    
-    if (result == 'added' || result == 'edited') {
-      load();
+
+    if (result is String) {
+      widget.refreshNotifier.value++;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            result == 'added' 
-                ? 'Password added successfully' 
+            existingItem == null
+                ? 'Password added successfully'
                 : 'Password updated successfully',
             style: const TextStyle(color: Colors.green),
           ),
@@ -58,11 +139,11 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
         ),
       );
     } else {
-      load();
+      widget.refreshNotifier.value++;
     }
   }
 
-  String _getGroupingLetter(String name) {
+  String getGroupingLetter(String name) {
     var clean = name.trim().toUpperCase();
     if (clean.isEmpty) return '#';
     final firstChar = clean[0];
@@ -78,27 +159,22 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
       final query = searchQuery.toLowerCase();
       final name = (item['name'] ?? '').toLowerCase();
       final domain = (item['domain'] ?? '').toLowerCase();
-      return name.contains(query) || domain.contains(query);
+      return name.startsWith(query) || domain.startsWith(query);
     }).toList();
 
     final grouped = <String, List<Map<String, String>>>{};
-    
     for (final item in filteredPasswords) {
       final name = item['name'] ?? '';
-      final groupKey = _getGroupingLetter(name);
-      
+      final groupKey = getGroupingLetter(name);
       if (!grouped.containsKey(groupKey)) {
         grouped[groupKey] = [];
       }
       grouped[groupKey]!.add(item);
     }
-
     final sortedKeys = grouped.keys.toList()..sort();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Password Manager'),
-        scrolledUnderElevation: 0,
+      appBar: AppBar(title: const Text('Password Manager'), scrolledUnderElevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -106,48 +182,35 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
               searchFocusNode.unfocus();
               await Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      SettingsScreen(onToggleTheme: widget.onToggleTheme),
-                ),
+                MaterialPageRoute(builder: (_) => SettingsScreen(onToggleTheme: widget.onToggleTheme)),
               );
-              load();
+              widget.refreshNotifier.value++;
             },
           ),
         ],
       ),
       body: GestureDetector(
-        onTap: () {
-          searchFocusNode.unfocus();
-        },
+        onTap: () => searchFocusNode.unfocus(),
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white10
-                      : Colors.black12,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextField(
                   focusNode: searchFocusNode,
                   onChanged: (value) {
-                    setState(() {
-                      searchQuery = value;
-                    });
+                    setState(() => searchQuery = value);
                   },
                   decoration: InputDecoration(
-                    hintText:
-                        'Search from ${passwords.length} ${passwords.length == 1 ? 'password' : 'passwords'}',
+                    hintText:'Search from ${passwords.length} ${passwords.length == 1 ? 'password' : 'passwords'}',
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     prefixIcon: const Icon(Icons.search, size: 20),
                   ),
                   style: Theme.of(context).textTheme.bodyMedium,
@@ -156,15 +219,12 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
             ),
             Expanded(
               child: passwords.isEmpty
-                  ? const Center(child: Text('No passwords added'))
-                  : searchQuery.isNotEmpty && filteredPasswords.isEmpty
-                  ? const Center(child: Text('No passwords match your search'))
-                  : ListView.builder(
+                  ? const Center(child: Text('No passwords added')) : searchQuery.isNotEmpty && filteredPasswords.isEmpty
+                  ? const Center(child: Text('No passwords match your search')) : ListView.builder(
                       itemCount: sortedKeys.length,
-                      itemBuilder: (context, index) {
+                      itemBuilder: (listContext, index) {
                         final key = sortedKeys[index];
                         final items = grouped[key]!;
-                        
                         items.sort((a, b) {
                           var nameA = (a['name'] ?? '').toLowerCase();
                           var nameB = (b['name'] ?? '').toLowerCase();
@@ -175,45 +235,29 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 8,
-                              ),
-                              child: Text(
-                                key,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
+                              padding: const EdgeInsets.symmetric( horizontal: 20, vertical: 8),
+                              child: Text(key,
+                                style: TextStyle( fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                               ),
                             ),
                             ...items.map((item) {
                               return Card(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
+                                margin: const EdgeInsets.symmetric( horizontal: 12, vertical: 4),
                                 elevation: 1,
                                 child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: Colors.orange.withValues(alpha: 0.2),
-                                    child: Text(
-                                      key,
-                                      style: const TextStyle(
-                                        color: Colors.orange,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
+                                  leading: FaIcon(getPlatformIcon(item['name'] ?? ''), size: 24, color: Colors.orange),
                                   title: Text(
-                                    item['name'] ?? '',
+                                    item['name']?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
-                                  subtitle: Text(item['username'] ?? ''),
+                                  subtitle: Text(item['username']?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
                                   onTap: () {
                                     final pass = item['password'] ?? '';
-                                    Clipboard.setData(ClipboardData(text: pass));
+                                    Clipboard.setData(
+                                      ClipboardData(text: pass),
+                                    );
                                     HapticFeedback.lightImpact();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -224,25 +268,60 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
                                   },
                                   onLongPress: () async {
                                     HapticFeedback.heavyImpact();
-                                    final result = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => PasswordDetailsScreen(passwordItem: item),
-                                      ),
+                                    final result = await showDialog(
+                                      context: context,
+                                      builder: (_) => PasswordFlipCard(passwordItem: item),
                                     );
-                                    
-                                    load();
-                                    
-                                    if (result == 'deleted') {
-                                      if (!mounted) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Password deleted',
-                                            style: TextStyle(color: Colors.green),
-                                          ),
-                                          duration: Duration(seconds: 2),
-                                        ),
+                                    widget.refreshNotifier.value++;
+                                    if (result is Map &&
+                                        result['action'] == 'deleted') {
+                                      final id = result['id'];
+
+                                      if (!context.mounted) return;
+                                      final messenger = ScaffoldMessenger.of(
+                                        context,
+                                      );
+                                      messenger.hideCurrentSnackBar();
+                                      var undoPressed = false;
+                                      Timer? autoCloseTimer;
+
+                                      final deleteSnackBarController = messenger
+                                          .showSnackBar(
+                                            SnackBar(
+                                              content: const Text('Password moved to recycle bin'),
+                                              duration: const Duration(seconds: 3),
+                                              action: SnackBarAction(
+                                                label: 'UNDO',
+                                                onPressed: () async {
+                                                  undoPressed = true;
+                                                  autoCloseTimer?.cancel();
+                                                  final restored =
+                                                      await PasswordStore.restoreFromRecycleBin(
+                                                        id,
+                                                      );
+                                                  if (!restored || !mounted) return;                                   
+                                                  widget
+                                                      .refreshNotifier
+                                                      .value++;
+                                                  if (!mounted) return;
+                                                  messenger
+                                                      .hideCurrentSnackBar();
+                                                  messenger.showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text( 'Password restored'),
+                                                      duration: Duration(seconds: 2),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      autoCloseTimer = Timer(
+                                        const Duration(seconds: 3),
+                                        () {
+                                          if (!mounted || undoPressed) return;
+                                          deleteSnackBarController.close();
+                                        },
                                       );
                                     }
                                   },

@@ -10,23 +10,19 @@ import '../../utils/services/qr_decoder_service.dart';
 
 class AddAccountScreen extends StatefulWidget {
   final String? initialUrl;
-
   const AddAccountScreen({super.key, this.initialUrl});
 
   @override
   State<AddAccountScreen> createState() => AddAccountScreenState();
 }
 
-class AddAccountScreenState extends State<AddAccountScreen>
-    with SingleTickerProviderStateMixin {
+class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController tabController;
   MobileScannerController? scannerController;
   bool torchEnabled = false;
-
   final platformCtrl = TextEditingController();
   final usernameCtrl = TextEditingController();
   final secretCtrl = TextEditingController();
-
   bool fromQr = false;
   bool scanned = false;
   bool isScanningImage = false;
@@ -36,6 +32,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     tabController = TabController(length: 2, vsync: this);
 
     if (Platform.isAndroid || Platform.isIOS) {
@@ -77,7 +74,15 @@ class AddAccountScreenState extends State<AddAccountScreen>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && cameraPermissionDenied) {
+      checkCameraPermission();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     scannerController?.dispose();
     tabController.dispose();
     platformCtrl.dispose();
@@ -86,21 +91,12 @@ class AddAccountScreenState extends State<AddAccountScreen>
     super.dispose();
   }
 
-  String buildTotpUrl({
-    required String platform,
-    required String username,
-    required String secret,
-  }) {
+  String buildTotpUrl({required String platform, required String username, required String secret}) {
     return Uri(
       scheme: 'otpauth',
       host: 'totp',
       path: '$platform:$username',
-      queryParameters: {
-        'secret': secret,
-        'issuer': platform,
-        'digits': '6',
-        'period': '30',
-      },
+      queryParameters: {'secret': secret, 'issuer': platform, 'digits': '6', 'period': '30'},
     ).toString();
   }
 
@@ -111,10 +107,12 @@ class AddAccountScreenState extends State<AddAccountScreen>
 
   String normalizePlatformName(String input) {
     final words = input.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
-    return words.map((word) {
+    return words
+        .map((word) {
           if (word.length == 1) return word.toUpperCase();
           return '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}';
-        }).join(' ');
+        })
+        .join(' ');
   }
 
   void populateFromOtpAuth(String url) {
@@ -240,21 +238,15 @@ class AddAccountScreenState extends State<AddAccountScreen>
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Error scanning image',
-            style: TextStyle(color: Colors.red),
-          ),
-        ),
+        const SnackBar(content: Text('Error scanning image', style: TextStyle(color: Colors.red))),
       );
     }
   }
 
   Future<void> saveManual() async {
     final platform = normalizePlatformName(platformCtrl.text);
-    final username = usernameCtrl.text.trim();
+    final username = usernameCtrl.text.trim().toLowerCase();
     final secret = secretCtrl.text.replaceAll(' ', '').toUpperCase();
-
     platformCtrl.text = platform;
 
     if (platform.isEmpty) {
@@ -278,7 +270,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
     }
 
     setState(() => error = null);
-
     final url = buildTotpUrl(
       platform: platform,
       username: username,
@@ -286,7 +277,6 @@ class AddAccountScreenState extends State<AddAccountScreen>
     );
 
     final added = await TotpStore.add(platform, url);
-
     if (!added) {
       setState(() => error = 'Account already exists');
       return;
@@ -299,17 +289,13 @@ class AddAccountScreenState extends State<AddAccountScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Account'),
+      appBar: AppBar(title: const Text('Add Account'),
         bottom: TabBar(
           controller: tabController,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'Scan QR'),
-            Tab(text: 'Manual'),
-          ],
+          tabs: const [Tab(text: 'Scan QR'), Tab(text: 'Manual')],
         ),
       ),
       body: TabBarView(
@@ -325,17 +311,12 @@ class AddAccountScreenState extends State<AddAccountScreen>
                         children: [
                           const Icon(Icons.camera_alt_outlined, size: 72),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Camera permission is disabled',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          const Text('Camera permission is disabled',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Enable camera access in settings to scan QR codes.',
+                          const Text('Enable camera access in settings to scan QR codes.',
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
@@ -384,27 +365,14 @@ class AddAccountScreenState extends State<AddAccountScreen>
                                         ),
                                       ),
                                     ),
-                                    Positioned(
-                                      top: 12,
-                                      right: 12,
+                                    Positioned(top: 12, right: 12,
                                       child: Material(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.45,
-                                        ),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
+                                        color: Colors.black.withValues(alpha: 0.45),
+                                        borderRadius: BorderRadius.circular(999),
                                         child: IconButton(
-                                          tooltip: torchEnabled
-                                              ? 'Turn flashlight off'
-                                              : 'Turn flashlight on',
+                                          tooltip: torchEnabled ? 'Turn flashlight off' : 'Turn flashlight on',
                                           onPressed: toggleTorch,
-                                          icon: Icon(
-                                            torchEnabled
-                                                ? Icons.flash_off
-                                                : Icons.flash_on,
-                                            color: Colors.white,
-                                          ),
+                                          icon: Icon(torchEnabled ? Icons.flash_off : Icons.flash_on, color: Colors.white),
                                         ),
                                       ),
                                     ),
@@ -412,10 +380,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              const Text(
-                                'Align the QR code inside the square',
-                                textAlign: TextAlign.center,
-                              ),
+                              const Text('Align the QR code inside the square', textAlign: TextAlign.center),
                               const SizedBox(height: 16),
                               ElevatedButton.icon(
                                 onPressed: scanQrFromImage,
@@ -446,11 +411,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
                   children: [
                     const Icon(Icons.phone_android_rounded, size: 72),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Use your phone to scan the QR code',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    const Text('Use your phone to scan the QR code', textAlign: TextAlign.center, style: TextStyle(fontSize: 16)),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
                       onPressed: scanQrFromImage,
@@ -470,10 +431,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => saveManual(),
-                  decoration: const InputDecoration(
-                    labelText: 'Platform',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Platform', border: OutlineInputBorder()),
                 ),
                 if (fromQr) ...[
                   const SizedBox(height: 12),
@@ -486,13 +444,8 @@ class AddAccountScreenState extends State<AddAccountScreen>
                       ),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      'ℹ️  The username and secret key are locked to prevent accidental changes. You can only copy them and modify the platform name if needed.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.4,
-                        color: Colors.blue,
-                      ),
+                    child: const Text('ℹ️  The username and secret key are locked to prevent accidental changes. You can only copy them and modify the platform name if needed.',
+                      style: TextStyle(fontSize: 13, height: 1.4, color: Colors.blue),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -503,10 +456,7 @@ class AddAccountScreenState extends State<AddAccountScreen>
                   readOnly: fromQr,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => saveManual(),
-                  decoration: const InputDecoration(
-                    labelText: 'Username / Email',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Username/Email', border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -514,20 +464,13 @@ class AddAccountScreenState extends State<AddAccountScreen>
                   readOnly: fromQr,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => saveManual(),
-                  decoration: const InputDecoration(
-                    labelText: 'Secret key',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(labelText: 'Secret key', border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 16),
                 if (error != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      error!,
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
+                    child: Text(error!, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
                   ),
                 ElevatedButton(
                   onPressed: saveManual,

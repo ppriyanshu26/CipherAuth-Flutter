@@ -25,9 +25,7 @@ class TotpStore {
     return '$day$month$year $hour$minute$second';
   }
 
-  static int getCurrentTimestampMillis() {
-    return DateTime.now().millisecondsSinceEpoch;
-  }
+  static int getCurrentTimestampMillis() => DateTime.now().millisecondsSinceEpoch;
 
   static int parseTimestampToMillis(String timestamp) {
     try {
@@ -70,9 +68,7 @@ class TotpStore {
     }
   }
 
-  static Future<void> trackDeletedIdsWithTimestamp(
-    Map<String, int> deletedIds,
-  ) async {
+  static Future<void> trackDeletedIdsWithTimestamp(Map<String, int> deletedIds) async {
     if (deletedIds.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
     final existing = await getDeletionLog();
@@ -150,15 +146,13 @@ class TotpStore {
     await prefs.setString(deletionLogKey, jsonEncode(deletionLog));
   }
 
-  static Future<void> _saveActiveCredentials(
-    List<Map<String, String>> items,
-  ) async {
+  static Future<void> saveActiveCreds(List<Map<String, String>> items) async {
     final encrypted = await Crypto.encryptAes(jsonEncode(items));
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(storeKey, encrypted);
   }
 
-  static Future<List<Map<String, String>>> _loadRecycleBinRaw() async {
+  static Future<List<Map<String, String>>> loadRecycleBin() async {
     final prefs = await SharedPreferences.getInstance();
     final encrypted = prefs.getString(recycleBinKey);
     if (encrypted == null || encrypted.isEmpty) return [];
@@ -176,18 +170,13 @@ class TotpStore {
     }
   }
 
-  static Future<void> _saveRecycleBinRaw(
-    List<Map<String, String>> items,
-  ) async {
+  static Future<void> saveRecycleBin(List<Map<String, String>> items) async {
     final encrypted = await Crypto.encryptAes(jsonEncode(items));
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(recycleBinKey, encrypted);
   }
 
-  static List<Map<String, String>> mergeRecycleBins(
-    List<Map<String, String>> localBin,
-    List<Map<String, String>> remoteBin,
-  ) {
+  static List<Map<String, String>> mergeRecycleBins(List<Map<String, String>> localBin, List<Map<String, String>> remoteBin) {
     final merged = <String, Map<String, String>>{};
 
     void putEntry(Map<String, String> entry) {
@@ -239,16 +228,16 @@ class TotpStore {
 
   static Future<void> removeFromRecycleBinEntries(List<String> ids) async {
     if (ids.isEmpty) return;
-    final existing = await _loadRecycleBinRaw();
+    final existing = await loadRecycleBin();
     final idSet = ids.toSet();
     final updated = existing.where((e) => !idSet.contains(e['id'])).toList();
-    await _saveRecycleBinRaw(updated);
+    await saveRecycleBin(updated);
   }
 
   static Future<List<Map<String, String>>> getRecycleBin({
     bool purgeExpired = true,
   }) async {
-    final raw = await _loadRecycleBinRaw();
+    final raw = await loadRecycleBin();
     final deduped = mergeRecycleBins(raw, const <Map<String, String>>[]);
 
     if (!purgeExpired) {
@@ -272,7 +261,7 @@ class TotpStore {
     }
 
     if (purgedIds.isNotEmpty || kept.length != raw.length) {
-      await _saveRecycleBinRaw(kept);
+      await saveRecycleBin(kept);
       await removeFromDeletionLog(purgedIds);
     }
 
@@ -284,7 +273,6 @@ class TotpStore {
     int? deletedAtMillis,
   }) async {
     if (items.isEmpty) return;
-
     final now = deletedAtMillis ?? getCurrentTimestampMillis();
     final entries = <Map<String, String>>[];
     final deletionMap = <String, int>{};
@@ -293,17 +281,15 @@ class TotpStore {
       final normalized = normalizeCredential(item);
       final id = normalized['id'] ?? '';
       if (id.isEmpty) continue;
-
       final entry = {...normalized, 'deletedAt': now.toString()};
       entries.add(entry);
       deletionMap[id] = now;
     }
 
     if (entries.isEmpty) return;
-
     final existing = await getRecycleBin(purgeExpired: true);
     final merged = mergeRecycleBins(existing, entries);
-    await _saveRecycleBinRaw(merged);
+    await saveRecycleBin(merged);
     await trackDeletedIdsWithTimestamp(deletionMap);
   }
 
@@ -320,7 +306,6 @@ class TotpStore {
     if (deletedItems.isEmpty) return;
 
     await addToRecycleBin(deletedItems);
-
     final remaining = current
         .where((item) => !idSet.contains(item['id']))
         .toList();
@@ -331,11 +316,10 @@ class TotpStore {
     if (id.isEmpty) return false;
     await removeFromRecycleBinEntries([id]);
     await removeFromDeletionLog([id]);
-
     final active = await load();
     final filtered = active.where((e) => e['id'] != id).toList();
     if (filtered.length != active.length) {
-      await _saveActiveCredentials(filtered);
+      await saveActiveCreds(filtered);
     }
     return true;
   }
@@ -350,9 +334,7 @@ class TotpStore {
         break;
       }
     }
-
     if (entry == null) return false;
-
     final active = await load();
     final restored = {
       'id': entry['id'] ?? '',
@@ -370,7 +352,7 @@ class TotpStore {
       ),
     );
 
-    await _saveActiveCredentials(updated);
+    await saveActiveCreds(updated);
     await removeFromRecycleBinEntries([id]);
     await removeFromDeletionLog([id]);
     return true;
@@ -420,16 +402,14 @@ class TotpStore {
       final cleanedBin = recycleBin
           .where((item) => !resurrectedIds.contains(item['id']))
           .toList();
-      await _saveRecycleBinRaw(cleanedBin);
+      await saveRecycleBin(cleanedBin);
       await removeFromDeletionLog(resurrectedIds);
     }
-
     return filtered;
   }
 
   static Future<bool> add(String platform, String url) async {
     final list = await load();
-
     final uri = Uri.parse(url);
     final rawPath = uri.path;
     final label = rawPath.startsWith('/') ? rawPath.substring(1) : rawPath;
@@ -440,12 +420,10 @@ class TotpStore {
       final separator = decodedLabel.indexOf(':');
       username = decodedLabel.substring(separator + 1).trim();
     } else {
-      // Account-only labels are valid otpauth format.
       username = decodedLabel;
     }
 
     final secret = (uri.queryParameters['secret'] ?? '').toUpperCase();
-
     final p = platform.trim().toLowerCase();
     final u = username.trim().toLowerCase();
 
@@ -467,9 +445,7 @@ class TotpStore {
       'secretcode': secret,
       'createdAt': getFormattedTimestamp(),
     };
-
     list.add(newItem);
-
     list.sort(
       (a, b) =>
           a['platform']!.toLowerCase().compareTo(b['platform']!.toLowerCase()),
@@ -480,7 +456,6 @@ class TotpStore {
     await prefs.setString(storeKey, encrypted);
     await removeFromDeletionLog([id]);
     await removeFromRecycleBinEntries([id]);
-
     return true;
   }
 
@@ -499,8 +474,7 @@ class TotpStore {
     if (deletedIds.isNotEmpty) {
       await trackDeletedIds(deletedIds);
     }
-
-    await _saveActiveCredentials(items);
+    await saveActiveCreds(items);
   }
 
   static Future<void> saveAllAndMerge(
@@ -620,8 +594,8 @@ class TotpStore {
       ),
     );
 
-    await _saveActiveCredentials(filteredItems);
+    await saveActiveCreds(filteredItems);
     await saveDeletionLog(mergedDeletionLog);
-    await _saveRecycleBinRaw(mergedRecycleBin);
+    await saveRecycleBin(mergedRecycleBin);
   }
 }

@@ -6,40 +6,25 @@ class CipherAuthBroadcaster {
   static const int broadcastPort = 34567;
   static const String serviceType = 'CIPHERAUTH_SYNC';
   static const String broadcastAddress = '255.255.255.255';
-
   late RawDatagramSocket socket;
   bool isRunning = false;
   late Timer broadcastTimer;
 
   Future<void> startBroadcasting(String deviceName) async {
     if (isRunning) return;
-
     try {
       socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
       socket.broadcastEnabled = true;
       isRunning = true;
 
       String localIP = await getLocalIP();
-
       broadcastTimer = Timer.periodic(Duration(seconds: 1), (_) async {
-        final message = {
-          'type': serviceType,
-          'device_name': deviceName,
-          'ip': localIP,
-          'timestamp': DateTime.now().millisecondsSinceEpoch / 1000,
-        };
-
+        final message = {'type': serviceType, 'device_name': deviceName, 'ip': localIP, 'timestamp': DateTime.now().millisecondsSinceEpoch/1000};
         final encoded = utf8.encode(jsonEncode(message));
 
         try {
-          socket.send(
-            encoded,
-            InternetAddress(broadcastAddress),
-            broadcastPort,
-          );
-        } catch (e) {
-          //
-        }
+          socket.send(encoded, InternetAddress(broadcastAddress), broadcastPort);
+        } catch (_) {}
       });
     } catch (e) {
       isRunning = false;
@@ -71,9 +56,7 @@ class CipherAuthBroadcaster {
           }
         }
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return '127.0.0.1';
   }
 }
@@ -96,13 +79,10 @@ class CipherAuthDiscovery {
       );
       return scannedDevices;
     }
-
     return devices;
   }
 
-  static Future<List<Map<String, dynamic>>> performDiscovery({
-    String? excludeDeviceName,
-  }) async {
+  static Future<List<Map<String, dynamic>>> performDiscovery({String? excludeDeviceName}) async {
     final devices = <String, Map<String, dynamic>>{};
 
     try {
@@ -132,15 +112,9 @@ class CipherAuthDiscovery {
 
                 final deviceIp = datagram.address.address;
 
-                devices[deviceName] = {
-                  'name': deviceName,
-                  'ip': deviceIp,
-                  'timestamp': message['timestamp'] ?? 0,
-                };
+                devices[deviceName] = { 'name': deviceName, 'ip': deviceIp, 'timestamp': message['timestamp'] ?? 0};
               }
-            } catch (e) {
-              //
-            }
+            } catch (_) {}
           }
         },
         onDone: () {
@@ -164,9 +138,7 @@ class CipherAuthDiscovery {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> scanNetworkRange({
-    String? excludeDeviceName,
-  }) async {
+  static Future<List<Map<String, dynamic>>> scanNetworkRange({ String? excludeDeviceName}) async {
     final devices = <String, Map<String, dynamic>>{};
 
     try {
@@ -213,9 +185,7 @@ class CipherAuthDiscovery {
           }
         }
       }
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
     return null;
   }
 
@@ -235,8 +205,6 @@ class CipherAuthDiscovery {
         'ip': ip,
         'timestamp': DateTime.now().millisecondsSinceEpoch / 1000,
       };
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
   }
 }

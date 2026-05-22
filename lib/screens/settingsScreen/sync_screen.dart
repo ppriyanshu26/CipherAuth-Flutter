@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/sync/sync_service.dart';
 import '../../utils/sync/sync_connection.dart';
-import '../../utils/services/storage_service.dart';
 import '../../utils/crypto/totp_store.dart';
+import '../../utils/crypto/password_store.dart';
 import '../../utils/crypto/runtime_key.dart';
 
 class SyncScreen extends StatefulWidget {
@@ -16,205 +16,155 @@ class SyncScreen extends StatefulWidget {
 }
 
 class SyncScreenState extends State<SyncScreen> {
+  static const String deviceNamePrefsKey = 'sync_device_name';
   late CipherAuthBroadcaster broadcaster;
   List<Map<String, dynamic>> discoveredDevices = [];
   bool isDiscovering = false;
-  bool syncOccurred = false;
   late String deviceName;
   final TextEditingController deviceNameController = TextEditingController();
-
-  String setDeviceName() {
-    if (Platform.isAndroid) {
-      return 'CipherAuth Android';
-    } else if (Platform.isWindows) {
-      return 'CipherAuth Windows';
-    } else if (Platform.isIOS) {
-      return 'CipherAuth iOS';
-    } else if (Platform.isMacOS) {
-      return 'CipherAuth macOS';
-    } else if (Platform.isLinux) {
-      return 'CipherAuth Linux';
-    }
-    return 'CipherAuth Device';
-  }
+  List<Map<String, String>> localTotps = [];
+  List<Map<String, String>> localPasswords = [];
+  List<Map<String, String>> localPasswordRecycleBin = [];
+  List<Map<String, String>> localTotpRecycleBin = [];
 
   @override
   void initState() {
     super.initState();
     broadcaster = CipherAuthBroadcaster();
-    loadDeviceName();
-    initializeListening();
+    initializeDeviceName();
   }
 
-  void initializeListening() async {
-    final hasPass = await Storage.hasMasterPassword();
-    if (hasPass && mounted) {
-      final masterPassword = RuntimeKey.rawPassword;
-      if (masterPassword == null) return;
-      SyncConnection.startListeningForSync(masterPassword, (
-        success,
-        mergedCredentials,
-      ) async {
-        if (!mounted) return;
-        if (success && mergedCredentials != null) {
-          syncOccurred = true;
-          final message = 'SYNC COMPLETE!';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                message,
-                style: const TextStyle(color: Colors.green),
-              ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+  String getDefaultDeviceName() {
+    if (kIsWeb) return 'CipherAuth Web';
+    if (Platform.isAndroid) return 'CipherAuth Android';
+    if (Platform.isWindows) return 'CipherAuth Windows';
+    if (Platform.isIOS) return 'CipherAuth iOS';
+    if (Platform.isMacOS) return 'CipherAuth macOS';
+    if (Platform.isLinux) return 'CipherAuth Linux';
+    return 'CipherAuth Device';
+  }
+
+  Future<void> initializeDeviceName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedName = prefs.getString(deviceNamePrefsKey)?.trim();
+    final initialName = savedName == null || savedName.isEmpty ? getDefaultDeviceName() : savedName;
+
+    if (!mounted) return;
+    setState(() {
+      deviceName = initialName;
+      deviceNameController.text = initialName;
+    });
+
+    await loadLocalData();
+    if (!mounted) return;
+
+    startListeningAsServer();
+    scanForDevices();
+  }
+
+  Future<void> loadLocalData() async {
+    localTotps = await TotpStore.load();
+    localPasswords = await PasswordStore.load();
+    localPasswordRecycleBin = await PasswordStore.getRecycleBin(
+      purgeExpired: true,
+    );
+    localTotpRecycleBin = await TotpStore.getRecycleBin(purgeExpired: true);
+  }
+
+  Future<void> saveDeviceName() async {
+    final updatedName = deviceNameController.text.trim();
+    if (updatedName.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(deviceNamePrefsKey, updatedName);
+    if (!mounted) return;
+
+    setState(() {
+      deviceName = updatedName;
+      deviceNameController.text = updatedName;
+      deviceNameController.selection = TextSelection.collapsed(
+        offset: updatedName.length,
+      );
+    });
+
+    try {
+      broadcaster.stopBroadcasting();
+    } catch (_) {}
+
+    await broadcaster.startBroadcasting(deviceName);
+    await scanForDevices();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Device name updated', style: TextStyle(color: Colors.green))));
+  }
+
+  void startListeningAsServer() {
+    final masterPass = RuntimeKey.rawPassword ?? '';
+    if (masterPass.isEmpty) return;
+
+    SyncConnection.startListening(
+      masterPass,
+      () => localTotps,
+      () => localPasswords,
+      () => localPasswordRecycleBin,
+      () => localTotpRecycleBin,
+      (mergedTotps, mergedPasswords, peerName) async {
+        await loadLocalData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sync successful with $peerName', style: const TextStyle(color: Colors.green))));
         }
+      },
+    );
+    broadcaster.startBroadcasting(deviceName);
+  }
+
+  Future<void> scanForDevices() async {
+    setState(() => isDiscovering = true);
+    final devices = await CipherAuthDiscovery.discoverDevices(
+      excludeDeviceName: deviceName,
+    );
+    if (mounted) {
+      setState(() {
+        discoveredDevices = devices;
+        isDiscovering = false;
       });
     }
   }
 
-  Future<void> loadDeviceName() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedName = prefs.getString('device_name') ?? setDeviceName();
-    if (!mounted) return;
-    setState(() {
-      deviceName = savedName;
-      deviceNameController.text = deviceName;
-    });
-    startSync();
-  }
+  Future<void> connectToDevice(String ip, String name) async {
+    final masterPass = RuntimeKey.rawPassword ?? '';
+    if (masterPass.isEmpty) return;
 
-  Future<void> saveDeviceName(String name) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('device_name', name);
-    if (!mounted) return;
-    setState(() => deviceName = name);
-    broadcaster.stopBroadcasting();
-    startSync();
-  }
-
-  Future<void> startSync() async {
-    await broadcaster.startBroadcasting(deviceName);
-    discoverDevices();
-  }
-
-  Future<void> discoverDevices() async {
-    if (!mounted) return;
-    setState(() => isDiscovering = true);
-    final devices = await compute(runDiscovery, deviceName);
-    if (!mounted) return;
-    setState(() {
-      discoveredDevices = devices;
-      isDiscovering = false;
-    });
-  }
-
-  Future<void> connectToDevice(String deviceIp, String deviceName) async {
-    final hasPass = await Storage.hasMasterPassword();
-    if (!hasPass) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No password set', style: TextStyle(color: Colors.red)),
-        ),
-      );
-      return;
-    }
-
-    final masterPassword = RuntimeKey.rawPassword;
-    if (masterPassword == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Cannot retrieve master password',
-            style: TextStyle(color: Colors.red),
-          ),
-        ),
-      );
-      return;
-    }
-
-    final localCredentials = await TotpStore.load();
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('🔄 Connecting and syncing...'),
-        duration: Duration(seconds: 1),
-      ),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
-    final result = await SyncConnection.sendSyncAndMerge(
-      deviceIp,
-      masterPassword,
-      localCredentials,
-    );
+    try {
+      await SyncConnection.sendSyncAndMerge( ip, masterPass, localTotps, localPasswords, localPasswordRecycleBin, localTotpRecycleBin, deviceName);
+      await loadLocalData();
 
-    if (!mounted) return;
-
-    if (result['success'] == true) {
-      final mergedCredentials =
-          result['mergedCredentials'] as List<Map<String, String>>?;
-      if (mergedCredentials != null) {
-        final mergedDeletionLogDynamic =
-            result['mergedDeletionLog'] as Map<String, dynamic>?;
-        final mergedDeletionLog = <String, int>{};
-        if (mergedDeletionLogDynamic != null) {
-          mergedDeletionLogDynamic.forEach((k, v) {
-            mergedDeletionLog[k] = (v as num).toInt();
-          });
-        }
-        final mergedRecycleBinDynamic =
-            result['mergedRecycleBin'] as List<dynamic>?;
-        final mergedRecycleBin = <Map<String, String>>[];
-        if (mergedRecycleBinDynamic != null) {
-          for (final entry in mergedRecycleBinDynamic) {
-            if (entry is Map) {
-              mergedRecycleBin.add(
-                TotpStore.normalizeRecycleBinEntry(
-                  entry.cast<String, dynamic>(),
-                ),
-              );
-            }
-          }
-        }
-
-        await TotpStore.saveAllAndMerge(
-          mergedCredentials,
-          mergedDeletionLog,
-          mergedRecycleBin,
-        );
-        syncOccurred = true;
-      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'SYNC COMPLETE!',
-            style: TextStyle(color: Colors.green),
-          ),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } else {
-      final reason = result['reason'] ?? 'unknown_error';
-      final message = reason == 'password_mismatch'
-          ? 'PASSWORD MISMATCH'
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sync successful with $name', style: const TextStyle(color: Colors.green))));
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      final errorMsg = e is FormatException && e.message.contains('password mismatch')
+          ? 'Sync failed: Password mismatch.'
           : 'Sync failed';
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message, style: const TextStyle(color: Colors.red)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg, style: const TextStyle(color: Colors.red))));
     }
   }
 
   @override
   void dispose() {
-    broadcaster.stopBroadcasting();
+    try {
+      broadcaster.stopBroadcasting();
+    } catch (_) {}
     SyncConnection.stopListening();
     deviceNameController.dispose();
     super.dispose();
@@ -223,59 +173,63 @@ class SyncScreenState extends State<SyncScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sync Devices'),
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            SyncConnection.stopListening();
-            broadcaster.stopBroadcasting();
-            Navigator.pop(context, syncOccurred);
-          },
-        ),
+      appBar: AppBar(title: const Text('Device Sync'), scrolledUnderElevation: 0,
+        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: scanForDevices)],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(
-                  controller: deviceNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Device Name',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.check),
-                      onPressed: () {
-                        saveDeviceName(deviceNameController.text);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Device name updated'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                    ),
+                Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Both devices must be on the same Wi-Fi network. Please disable any VPNs or services that change your IP address to ensure discovery works.',
+                    style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface),
                   ),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: isDiscovering ? null : discoverDevices,
-                  icon: const Icon(Icons.search),
-                  label: const Text('Discover Devices'),
                 ),
               ],
             ),
           ),
-
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: deviceNameController,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                labelText: 'This Device Name',
+                border: OutlineInputBorder(),
+                suffixIcon: IconButton(icon: const Icon(Icons.check), onPressed: saveDeviceName, tooltip: 'Save device name'),
+              ),
+              onSubmitted: (_) => saveDeviceName(),
+            ),
+          ),
+          const Divider(height: 1),
           Expanded(
-            child: discoveredDevices.isEmpty
+            child: isDiscovering
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Searching for devices on network...'),
+                      ],
+                    ),
+                  )
+                : discoveredDevices.isEmpty
                 ? Center(
-                    child: Text(
-                      isDiscovering ? 'Searching...' : 'No devices found',
-                      style: const TextStyle(color: Colors.grey),
+                    child: Text('No devices found on local network.\nEnsure both devices are on the same Wi-Fi.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Theme.of(context).colorScheme.outline),
                     ),
                   )
                 : ListView.builder(
@@ -283,20 +237,18 @@ class SyncScreenState extends State<SyncScreen> {
                     itemBuilder: (context, index) {
                       final device = discoveredDevices[index];
                       return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         child: ListTile(
-                          leading: const Icon(Icons.devices),
-                          title: Text(device['name'] ?? 'Unknown'),
-                          subtitle: Text(device['ip'] ?? 'No IP'),
-                          trailing: ElevatedButton(
-                            onPressed: () => connectToDevice(
-                              device['ip'] ?? '',
-                              device['name'] ?? 'Unknown',
-                            ),
-                            child: const Text('Connect'),
+                          leading: CircleAvatar(
+                            backgroundColor: Theme.of(context,).colorScheme.primaryContainer,
+                            child: Icon(Icons.devices, color: Theme.of(context,).colorScheme.onPrimaryContainer),
+                          ),
+                          title: Text(device['name'] ?? 'Unknown Device', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(device['ip'] ?? 'Unknown IP'),
+                          trailing: ElevatedButton.icon(
+                            onPressed: () => connectToDevice(device['ip'] ?? '', device['name'] ?? 'Unknown',),
+                            icon: const Icon(Icons.sync),
+                            label: const Text('Sync'),
                           ),
                         ),
                       );
@@ -307,10 +259,4 @@ class SyncScreenState extends State<SyncScreen> {
       ),
     );
   }
-}
-
-Future<List<Map<String, dynamic>>> runDiscovery(String? excludeDeviceName) {
-  return CipherAuthDiscovery.discoverDevices(
-    excludeDeviceName: excludeDeviceName,
-  );
 }

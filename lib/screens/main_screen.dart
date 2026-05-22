@@ -11,30 +11,38 @@ class MainScreen extends StatefulWidget {
 }
 
 class MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
-  late final List<Widget> _screens;
+  int currentIndex = 0;
+  late final List<Widget> screens;
+  
+  final ValueNotifier<int> refreshNotifier = ValueNotifier<int>(0);
 
   @override
   void initState() {
     super.initState();
-    _screens = [
-      AuthenticatorScreen(onToggleTheme: widget.onToggleTheme),
-      PasswordManagerScreen(onToggleTheme: widget.onToggleTheme),
+    screens = [
+      AuthenticatorScreen(onToggleTheme: widget.onToggleTheme, refreshNotifier: refreshNotifier),
+      PasswordManagerScreen(onToggleTheme: widget.onToggleTheme, refreshNotifier: refreshNotifier),
     ];
+  }
+
+  @override
+  void dispose() {
+    refreshNotifier.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+        index: currentIndex,
+        children: screens,
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
+        selectedIndex: currentIndex,
         onDestinationSelected: (index) {
           setState(() {
-            _currentIndex = index;
+            currentIndex = index;
           });
         },
         destinations: const [

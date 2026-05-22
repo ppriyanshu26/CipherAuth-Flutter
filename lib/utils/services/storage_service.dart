@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../crypto/crypto.dart';
+import '../crypto/password_store.dart';
 import '../crypto/totp_store.dart';
 
 class Storage {
@@ -45,32 +46,31 @@ class Storage {
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final encryptedStore = prefs.getString(TotpStore.storeKey);
-      String decryptedStore = '[]';
-      if (encryptedStore != null && encryptedStore.isNotEmpty) {
-        decryptedStore = await Crypto.decryptAesWithPassword(
-          encryptedStore,
-          oldPassword,
-        );
-      }
-      final reEncryptedStore = await Crypto.encryptAesWithPassword(
-        decryptedStore,
-        newPassword,
-      );
-      await prefs.setString(TotpStore.storeKey, reEncryptedStore);
+      Future<void> reEncryptKey(
+        String key, {
+        String fallbackPlaintext = '[]',
+      }) async {
+        final encryptedValue = prefs.getString(key);
+        String decryptedValue = fallbackPlaintext;
 
-      final encryptedRecycle = prefs.getString(TotpStore.recycleBinKey);
-      if (encryptedRecycle != null && encryptedRecycle.isNotEmpty) {
-        final decryptedRecycle = await Crypto.decryptAesWithPassword(
-          encryptedRecycle,
-          oldPassword,
-        );
-        final reEncryptedRecycle = await Crypto.encryptAesWithPassword(
-          decryptedRecycle,
+        if (encryptedValue != null && encryptedValue.isNotEmpty) {
+          decryptedValue = await Crypto.decryptAesWithPassword(
+            encryptedValue,
+            oldPassword,
+          );
+        }
+
+        final reEncryptedValue = await Crypto.encryptAesWithPassword(
+          decryptedValue,
           newPassword,
         );
-        await prefs.setString(TotpStore.recycleBinKey, reEncryptedRecycle);
+        await prefs.setString(key, reEncryptedValue);
       }
+
+      await reEncryptKey(TotpStore.storeKey);
+      await reEncryptKey(TotpStore.recycleBinKey);
+      await reEncryptKey(PasswordStore.storeKey);
+      await reEncryptKey(PasswordStore.recycleBinKey);
     } catch (e) {
       rethrow;
     }

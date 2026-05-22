@@ -19,6 +19,7 @@ class ViewQrScreenState extends State<ViewQrScreen> {
   bool isLoading = false;
   bool isPasswordVisible = false;
   String? error;
+  String searchQuery = '';
 
   @override
   void dispose() {
@@ -59,22 +60,12 @@ class ViewQrScreenState extends State<ViewQrScreen> {
     final secret = item['secretcode']!.replaceAll(' ', '').toUpperCase();
     final username = (item['username'] ?? '').trim();
     final platform = item['platform']!.trim();
-
     final encodedPlatform = Uri.encodeComponent(platform);
     final encodedUsername = Uri.encodeComponent(username);
-    final label = username.isEmpty
-        ? encodedPlatform
-        : '$encodedPlatform:$encodedUsername';
+    final label = username.isEmpty ? encodedPlatform : '$encodedPlatform:$encodedUsername';
     final query = Uri(
-      queryParameters: {
-        'secret': secret,
-        'issuer': platform,
-        'algorithm': 'SHA1',
-        'digits': '6',
-        'period': '30',
-      },
+      queryParameters: {'secret': secret, 'issuer': platform, 'algorithm': 'SHA1', 'digits': '6', 'period': '30'},
     ).query;
-
     return 'otpauth://totp/$label?$query';
   }
 
@@ -88,16 +79,12 @@ class ViewQrScreenState extends State<ViewQrScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'This app is developed keeping privacy in mind, be sure with who you share the QR codes, it is advisable to use the sync feature to securely sync with your devices',
+              const Text('This app is developed keeping privacy in mind, be sure with who you share the QR codes, it is advisable to use the sync feature to securely sync with your devices',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.orange),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Enter your password to view QR codes',
-                style: TextStyle(fontSize: 16),
-              ),
+              const Text('Enter your password to view QR codes', style: TextStyle(fontSize: 16)),
               const SizedBox(height: 24),
               TextField(
                 controller: passwordController,
@@ -105,15 +92,9 @@ class ViewQrScreenState extends State<ViewQrScreen> {
                 onSubmitted: (_) => verifyPassword(),
                 decoration: InputDecoration(
                   labelText: 'Master Password',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   suffixIcon: IconButton(
-                    icon: Icon(
-                      isPasswordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
+                    icon: Icon(isPasswordVisible ? Icons.visibility : Icons.visibility_off),
                     onPressed: () {
                       setState(() {
                         isPasswordVisible = !isPasswordVisible;
@@ -125,10 +106,7 @@ class ViewQrScreenState extends State<ViewQrScreen> {
               if (error != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
+                  child: Text(error!, style: const TextStyle(color: Colors.red)),
                 ),
               const SizedBox(height: 16),
               SizedBox(
@@ -136,11 +114,7 @@ class ViewQrScreenState extends State<ViewQrScreen> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : verifyPassword,
                   child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('Verify'),
                 ),
               ),
@@ -151,35 +125,71 @@ class ViewQrScreenState extends State<ViewQrScreen> {
     }
 
     if (selectedIndex == null) {
+      final filteredTotps = totps.where((item) {
+        final platform = item['platform']?.toLowerCase() ?? '';
+        return platform.startsWith(searchQuery.toLowerCase());
+      }).toList();
+
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Select Credential'),
-          scrolledUnderElevation: 0,
-        ),
+        appBar: AppBar(title: const Text('Select Credential'), scrolledUnderElevation: 0),
         body: totps.isEmpty
             ? const Center(child: Text('No credentials found'))
-            : ListView.builder(
-                itemCount: totps.length,
-                itemBuilder: (context, index) {
-                  final item = totps[index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        item['platform']!,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+            : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      subtitle: Text(item['username'] ?? ''),
-                      trailing: const Icon(Icons.qr_code),
-                      onTap: () {
-                        setState(() => selectedIndex = index.toString());
-                      },
+                      child: TextField(
+                        onChanged: (value) {
+                          setState(() {
+                            searchQuery = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText:'Search from ${totps.length} ${totps.length == 1 ? 'account' : 'accounts'}',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                     ),
-                  );
-                },
+                  ),
+                  Expanded(
+                    child: searchQuery.isNotEmpty && filteredTotps.isEmpty
+                        ? const Center(child: Text('No platforms match your search'))
+                        : ListView.builder(
+                            itemCount: filteredTotps.length,
+                            itemBuilder: (context, i) {
+                              final item = filteredTotps[i];
+                              return Card(
+                                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                child: ListTile(
+                                  title: Text(item['platform']!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Text(item['username'] ?? '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  trailing: const Icon(Icons.qr_code),
+                                  onTap: () {
+                                    setState(() => selectedIndex = totps.indexOf(item).toString());
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
       );
     }
@@ -189,13 +199,14 @@ class ViewQrScreenState extends State<ViewQrScreen> {
     final otpauthUrl = generateOtpauthUrl(item);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(item['platform']!),
-        scrolledUnderElevation: 0,
+      appBar: AppBar(title: Text(item['platform']!), scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            setState(() => selectedIndex = null);
+            setState(() {
+              selectedIndex = null;
+              searchQuery = '';
+            });
           },
         ),
       ),
@@ -205,18 +216,9 @@ class ViewQrScreenState extends State<ViewQrScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                item['platform']!,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(item['platform']!, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text(
-                item['username'] ?? '',
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
-              ),
+              Text(item['username'] ?? '', style: const TextStyle(fontSize: 14, color: Colors.grey)),
               const SizedBox(height: 32),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -242,14 +244,12 @@ class ViewQrScreenState extends State<ViewQrScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              const Text(
-                'Scan this QR code with your authenticator app',
+              const Text('Scan this QR code with your authenticator app',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Or use secret key:\nTap to copy it!',
+              const Text('Or use secret key:\nTap to copy it!',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
@@ -262,32 +262,14 @@ class ViewQrScreenState extends State<ViewQrScreen> {
 
                   final messenger = ScaffoldMessenger.of(context);
                   messenger.hideCurrentSnackBar();
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Secret key copied'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  messenger.showSnackBar(const SnackBar(content: Text('Secret key copied'), duration: Duration(seconds: 2)));
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey[400]!),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.grey[400]!)),
                   child: Text(
                     item['secretcode']!,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'monospace',
-                      letterSpacing: 2,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[900],
-                    ),
+                    style: TextStyle(fontSize: 16, fontFamily: 'monospace', letterSpacing: 2, fontWeight: FontWeight.w500, color: Colors.grey[900]),
                     textAlign: TextAlign.center,
                   ),
                 ),

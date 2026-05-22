@@ -14,11 +14,9 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final oldPasswordController = TextEditingController();
   final newPasswordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
-
   bool obscureOld = true;
   bool obscureNew = true;
   bool obscureConfirm = true;
-
   String? error;
   bool isLoading = false;
 
@@ -49,7 +47,6 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
       );
       return;
     }
-
     setState(() => isLoading = true);
 
     try {
@@ -91,10 +88,7 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reset Your Password'),
-        scrolledUnderElevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Reset Your Password'), scrolledUnderElevation: 0),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
@@ -105,12 +99,10 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 obscureText: obscureOld,
                 onSubmitted: (_) => resetPassword(),
                 decoration: InputDecoration(
-                  labelText: 'Old Password',
+                  labelText: 'Current Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(
-                      obscureOld ? Icons.visibility : Icons.visibility_off,
-                    ),
+                    icon: Icon(obscureOld ? Icons.visibility : Icons.visibility_off),
                     onPressed: () => setState(() => obscureOld = !obscureOld),
                   ),
                 ),
@@ -124,9 +116,7 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   labelText: 'New Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(
-                      obscureNew ? Icons.visibility : Icons.visibility_off,
-                    ),
+                    icon: Icon(obscureNew ? Icons.visibility : Icons.visibility_off),
                     onPressed: () => setState(() => obscureNew = !obscureNew),
                   ),
                 ),
@@ -140,9 +130,7 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   labelText: 'Confirm New Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(
-                      obscureConfirm ? Icons.visibility : Icons.visibility_off,
-                    ),
+                    icon: Icon(obscureConfirm ? Icons.visibility : Icons.visibility_off),
                     onPressed: () =>
                         setState(() => obscureConfirm = !obscureConfirm),
                   ),
@@ -152,22 +140,14 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
               if (error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    error!,
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
+                  child: Text(error!, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
                 ),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : resetPassword,
                   child: isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('Reset Password'),
                 ),
               ),

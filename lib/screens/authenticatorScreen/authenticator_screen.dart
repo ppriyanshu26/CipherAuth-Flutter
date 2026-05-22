@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../main.dart';
@@ -8,10 +7,17 @@ import '../../utils/crypto/totp.dart';
 import 'add_account_screen.dart';
 import '../settingsScreen/settings_screen.dart';
 import 'package:flutter/services.dart';
+import 'authenticator_card.dart';
 
 class AuthenticatorScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
-  const AuthenticatorScreen({super.key, required this.onToggleTheme});
+  final ValueNotifier<int> refreshNotifier;
+
+  const AuthenticatorScreen({
+    super.key, 
+    required this.onToggleTheme, 
+    required this.refreshNotifier,
+  });
 
   @override
   State<AuthenticatorScreen> createState() => AuthenticatorScreenState();
@@ -23,7 +29,6 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
   bool selectionMode = false;
   String searchQuery = '';
   late FocusNode searchFocusNode = FocusNode();
-
   Timer? timer;
   int now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
@@ -31,6 +36,7 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
   void initState() {
     super.initState();
     load();
+    widget.refreshNotifier.addListener(load);
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
         now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -44,6 +50,7 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
 
   @override
   void dispose() {
+    widget.refreshNotifier.removeListener(load);
     timer?.cancel();
     searchFocusNode.dispose();
     super.dispose();
@@ -51,6 +58,7 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
 
   Future<void> load() async {
     final list = await TotpStore.load();
+    if (!mounted) return;
     setState(() => totps = list);
   }
 
@@ -59,7 +67,9 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
       context,
       MaterialPageRoute(builder: (_) => const AddAccountScreen()),
     );
-    if (changed == true) load();
+    if (changed == true) {
+      widget.refreshNotifier.value++;
+    }
   }
 
   void checkForPendingDeepLink() {
@@ -74,17 +84,13 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
 
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => AddAccountScreen(initialUrl: pendingUrl),
-        ),
+        MaterialPageRoute(builder: (_) => AddAccountScreen(initialUrl: pendingUrl)),
       ).then((result) {
         if (result == true) {
-          load();
+          widget.refreshNotifier.value++;
         }
       });
-    } catch (e) {
-      //
-    }
+    } catch (_) {}
   }
 
   Future<void> deleteSelected() async {
@@ -99,17 +105,16 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
       }
     }
     await TotpStore.moveToRecycleBinAndDeleteByIds(ids);
-    final updated = await TotpStore.load();
 
     setState(() {
-      totps = updated;
       selected.clear();
       selectionMode = false;
     });
+    widget.refreshNotifier.value++;
   }
 
   Color changeColor(int remaining, int period) {
-    final percentage = (remaining / period) * 100;
+    final percentage = (remaining/period)*100;
     if (percentage > 67) {
       return Colors.green;
     } else if (percentage > 34) {
@@ -190,234 +195,119 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
     return FontAwesomeIcons.globe;
   }
 
-  String truncate(String text, {int maxLength = 27}) {
-    if ((Platform.isAndroid || Platform.isIOS) && text.length > maxLength) {
-      return '${text.substring(0, maxLength - 2)}...';
-    }
-    return text;
-  }
-
   Widget tile(int index, Map<String, String> item) {
     final user = item['username'] ?? '';
     final secret = item['secretcode']!;
     final digits = 6;
     final period = 30;
+    final code = Totp.generate(secret: secret, digits: digits, period: period, time: now);
+    final remaining = period - (now % period);
+    final color = changeColor(remaining, period);
 
-    try {
-      final code = Totp.generate(
-        secret: secret,
-        digits: digits,
-        period: period,
-        time: now,
-      );
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      elevation: 2,
+      shadowColor: color.withValues(alpha: 0.3),
+      child: GestureDetector(
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: code));
+          HapticFeedback.lightImpact();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code copied to clipboard'), duration: Duration(seconds: 2)));
+        },
+        onLongPress: () async {
+          HapticFeedback.heavyImpact();
+          final result = await showDialog(
+            context: context,
+            builder: (_) => AuthenticatorCard(totpItem: item),
+          );
+          if (result is Map && result['action'] == 'deleted') {
+            final id = result['id'];
+            widget.refreshNotifier.value++;
 
-      final remaining = period - (now % period);
-      final color = changeColor(remaining, period);
-
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        elevation: 2,
-        shadowColor: color.withValues(alpha: 0.3),
-        child: GestureDetector(
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: code));
-            HapticFeedback.lightImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('TOTP copied to clipboard'),
-                duration: Duration(seconds: 2),
+            if (!mounted) return;
+            final messenger = ScaffoldMessenger.of(context);
+            messenger.hideCurrentSnackBar();
+            
+            var undoPressed = false;
+            Timer? autoCloseTimer;
+            final deleteSnackBarController = messenger.showSnackBar(
+              SnackBar(content: const Text('Credential moved to recycle bin'), duration: const Duration(seconds: 3),
+                action: SnackBarAction(
+                  label: 'UNDO',
+                  onPressed: () async {
+                    undoPressed = true;
+                    autoCloseTimer?.cancel();
+                    final restored = await TotpStore.restoreFromRecycleBin(id);
+                    if (!restored || !mounted) return;
+                    widget.refreshNotifier.value++;
+                    if (!mounted) return;
+                    messenger.hideCurrentSnackBar();
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Credential restored'), duration: Duration(seconds: 2)),
+                    );
+                  },
+                ),
               ),
             );
-          },
-          onLongPress: () {
-            showDialog(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: const Text('Delete credential?'),
-                content: Text('Delete ${item['platform']} - $user?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      final id = item['id'] ?? '';
-                      if (id.isEmpty) {
-                        if (!mounted) return;
-                        Navigator.pop(context);
-                        return;
-                      }
-
-                      await TotpStore.moveToRecycleBinAndDeleteByIds([id]);
-                      final updated = await TotpStore.load();
-
-                      setState(() {
-                        totps = updated;
-                      });
-
-                      if (!mounted) return;
-                      Navigator.pop(context);
-
-                      if (!mounted) return;
-                      final messenger = ScaffoldMessenger.of(context);
-                      messenger.hideCurrentSnackBar();
-                      var undoPressed = false;
-                      Timer? autoCloseTimer;
-                      final deleteSnackBarController = messenger.showSnackBar(
-                        SnackBar(
-                          content: const Text('Credential moved to recycle bin'),
-                          duration: const Duration(seconds: 3),
-                          action: SnackBarAction(
-                            label: 'UNDO',
-                            onPressed: () async {
-                              undoPressed = true;
-                              autoCloseTimer?.cancel();
-                              final restored = await TotpStore.restoreFromRecycleBin(id);
-                              if (!restored || !mounted) return;
-                              await load();
-                              if (!mounted) return;
-                              messenger.hideCurrentSnackBar();
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text('Credential restored'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      );
-                      autoCloseTimer = Timer(const Duration(seconds: 3), () {
-                        if (!mounted || undoPressed) return;
-                        deleteSnackBarController.close();
-                      });
-                    },
-                    child: const Text(
-                      'Delete',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-            minLeadingWidth: 0,
-            leading: selectionMode
-                ? Checkbox(
-                    value: selected.contains(index),
-                    onChanged: (_) {
-                      setState(() {
-                        selected.contains(index)
-                            ? selected.remove(index)
-                            : selected.add(index);
-                      });
-                    },
-                  )
-                : FaIcon(
-                    getPlatformIcon(item['platform']!),
-                    size: 24,
-                    color: Colors.orange,
-                  ),
-            title: Text(
-              truncate(item['platform']!, maxLength: 16),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            subtitle: Text(
-              truncate(user),
-              style: const TextStyle(fontSize: 12),
-            ),
-            trailing: selectionMode
-                ? null
-                : SizedBox(
-                    width: 100,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          code,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                            color: color,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 0),
-                        Text(
-                          '$remaining s',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: color.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-            onTap: selectionMode
-                ? () {
-                    setState(() {
-                      selected.contains(index)
-                          ? selected.remove(index)
-                          : selected.add(index);
-                    });
-                  }
-                : null,
-          ),
-        ),
-      );
-    } catch (e) {
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        elevation: 2,
+            
+            autoCloseTimer = Timer(const Duration(seconds: 3), () {
+              if (!mounted || undoPressed) return;
+              deleteSnackBarController.close();
+            });
+          }
+        },
         child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          minLeadingWidth: 0,
           leading: selectionMode
               ? Checkbox(
                   value: selected.contains(index),
                   onChanged: (_) {
                     setState(() {
-                      selected.contains(index)
-                          ? selected.remove(index)
-                          : selected.add(index);
+                      selected.contains(index) ? selected.remove(index) : selected.add(index);
                     });
                   },
                 )
-              : FaIcon(
-                  getPlatformIcon(item['platform']!),
-                  size: 24,
-                  color: Colors.orange,
-                ),
-          title: Text(
-            item['platform']!,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+              : FaIcon(getPlatformIcon(item['platform']!), size: 24, color: Colors.orange),
+          title: Text(item['platform']!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
-          subtitle: const Text(
-            'Error generating TOTP - try resetting password',
-            style: TextStyle(color: Colors.red, fontSize: 12),
+          subtitle: Text(user,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12),
           ),
           trailing: selectionMode
               ? null
-              : const Icon(Icons.error_outline, color: Colors.red),
+              : SizedBox(
+                  width: 100,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(code,
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: color),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 0),
+                      Text('$remaining s',
+                        style: TextStyle( fontSize: 11, fontWeight: FontWeight.w600, color: color.withValues(alpha: 0.7)),
+                      ),
+                    ],
+                  ),
+                ),
           onTap: selectionMode
               ? () {
                   setState(() {
-                    selected.contains(index)
-                        ? selected.remove(index)
-                        : selected.add(index);
+                    selected.contains(index) ? selected.remove(index) : selected.add(index);
                   });
                 }
               : null,
         ),
-      );
-    }
+      ),
+    );
   }
 
   @override
@@ -428,9 +318,7 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Authenticator"),
-        scrolledUnderElevation: 0,
+      appBar: AppBar(title: const Text("Authenticator"), scrolledUnderElevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -438,12 +326,9 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
               searchFocusNode.unfocus();
               await Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      SettingsScreen(onToggleTheme: widget.onToggleTheme),
-                ),
+                MaterialPageRoute(builder: (_) => SettingsScreen(onToggleTheme: widget.onToggleTheme)),
               );
-              load();
+              widget.refreshNotifier.value++;
             },
           ),
         ],
@@ -458,9 +343,7 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
               padding: const EdgeInsets.all(16),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white10
-                      : Colors.black12,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextField(
@@ -471,15 +354,11 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
                     });
                   },
                   decoration: InputDecoration(
-                    hintText:
-                        'Search from ${totps.length} ${totps.length == 1 ? 'account' : 'accounts'}',
+                    hintText:'Search from ${totps.length} ${totps.length == 1 ? 'account' : 'accounts'}',
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     prefixIcon: const Icon(Icons.search, size: 20),
                   ),
                   style: Theme.of(context).textTheme.bodyMedium,
@@ -511,10 +390,7 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
       bottomNavigationBar: selectionMode
           ? BottomAppBar(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

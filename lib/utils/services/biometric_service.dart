@@ -6,13 +6,11 @@ class BiometricService {
   static const passStore = FlutterSecureStorage();
   static const bioKey = 'biometric_enabled';
   static const passKey = 'biometric_password';
-
   static final localAuth = LocalAuthentication();
 
   static String getBiometricError(dynamic error) {
     if (error is PlatformException) {
       final code = error.code.toLowerCase();
-
       switch (code) {
         case 'notavailable':
           return 'Biometric authentication is not available on this device';
@@ -51,8 +49,7 @@ class BiometricService {
     }
   }
 
-  static Future<(bool authenticated, String? error)>
-  authenticateWithError() async {
+  static Future<(bool authenticated, String? error)> authenticateWithError() async {
     try {
       final result = await localAuth.authenticate(
         localizedReason: 'Unlock CipherAuth with your biometric',
@@ -78,8 +75,7 @@ class BiometricService {
   ) async {
     if (!await canUseBiometrics()) {
       return (
-        false,
-        'No biometric data enrolled. Please set up a fingerprint or face in your device settings, and ensure your device has a lock screen PIN, pattern, or password.',
+        false, 'No biometric data enrolled. Please set up a fingerprint or face in your device settings, and ensure your device has a lock screen PIN, pattern, or password.',
       );
     }
     final (authenticated, authError) = await authenticateWithError();
