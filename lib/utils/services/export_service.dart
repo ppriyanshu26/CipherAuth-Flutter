@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../crypto/totp_store.dart';
@@ -9,10 +9,6 @@ import '../crypto/runtime_key.dart';
 import '../crypto/csv_crypto.dart';
 
 class ExportService {
-  static String defaultExportFilename() => buildDefaultFilename();
-
-  static String defaultExportBaseName() => buildDefaultFilename().replaceFirst(RegExp(r'\.csv$'), '');
-
   static Future<bool> hasExportableCredentials() async {
     final totpCredentials = await TotpStore.load();
     final passwordCredentials = await PasswordStore.load();
@@ -28,21 +24,8 @@ class ExportService {
     final second = now.second.toString().padLeft(2, '0');
     return 'CipherAuth_${now.year}$month$day$hour$minute$second.csv';
   }
-
-  static String? normalizeFileName(String fileName) {
-    final trimmed = fileName.trim();
-    if (trimmed.isEmpty) {
-      return null;
-    }
-    
-    final safeName = trimmed.endsWith('.csv') ? trimmed : '$trimmed.csv';
-    if (safeName.contains(RegExp(r'[<>:"/\\|?*]'))) {
-      return null;
-    }
-    return safeName;
-  }
-
-  static Future<(bool, String)> exportToCsv({String? fileName}) async {
+  
+  static Future<(bool, String)> exportToCsv() async {
     try {
       final totpCredentials = await TotpStore.load();
       final passwordCredentials = await PasswordStore.load();
@@ -91,52 +74,55 @@ class ExportService {
 
       final encryptedContent = await CsvCrypto.encryptCsv(csvContent, password);
       final csvBytes = Uint8List.fromList(utf8.encode(encryptedContent));
+      final fileName = buildDefaultFilename();
 
-      if (!Platform.isWindows && !Platform.isAndroid) {
-        final normalizedName = normalizeFileName(
-          fileName ?? buildDefaultFilename(),
-        );
-        if (normalizedName == null) {
-          return (false, 'Invalid file name');
+      if (Platform.isAndroid) {
+        try {
+          const channel = MethodChannel('cipherauth/storage');
+          final String? result = await channel.invokeMethod<String>('saveToDownloads', {
+            'fileName': fileName,
+            'content': encryptedContent,
+          });
+
+          if (result == 'SUCCESS') {
+            return (true, 'File saved successfully');
+          } else {
+            return (false, 'Failed to save file');
+          }
+        } catch (_) {
+          return (false, 'Export failed');
+        }
+      }
+
+      if (Platform.isWindows) {
+        final downloadsDirectory = await getDownloadsDirectory();
+        if (downloadsDirectory == null) {
+          return (false, 'Downloads directory unavailable');
         }
 
-        final savePath = await FilePicker.platform.saveFile(
-          dialogTitle: 'Save CSV Export',
-          fileName: normalizedName,
-          type: FileType.custom,
-          allowedExtensions: ['csv'],
-          bytes: csvBytes,
-        );
-
-        if (savePath == null || savePath.isEmpty) {
-          return (false, 'Export cancelled');
+        if (!await downloadsDirectory.exists()) {
+          await downloadsDirectory.create(recursive: true);
         }
+
+        final file = File(
+          '${downloadsDirectory.path}${Platform.pathSeparator}$fileName',
+        );
+        
+        await file.writeAsBytes(csvBytes, flush: true);
         return (true, 'File saved successfully');
       }
 
-      final normalizedName = normalizeFileName(
-        fileName ?? buildDefaultFilename(),
+      final savePath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save CSV Export',
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+        bytes: csvBytes,
       );
-      if (normalizedName == null) {
-        return (false, 'Invalid file name');
-      }
 
-      final downloadsDirectory = await getDownloadsDirectory();
-      if (downloadsDirectory == null) {
-        return (false, 'Downloads directory unavailable');
+      if (savePath == null || savePath.isEmpty) {
+        return (false, 'Export cancelled');
       }
-
-      if (!await downloadsDirectory.exists()) {
-        await downloadsDirectory.create(recursive: true);
-      }
-
-      final file = File(
-        '${downloadsDirectory.path}${Platform.pathSeparator}$normalizedName',
-      );
-      if (await file.exists()) {
-        return (false, 'A file with this name already exists.');
-      }
-      await file.writeAsBytes(csvBytes, flush: true);
       return (true, 'File saved successfully');
     } catch (_) {
       return (false, 'Export failed');

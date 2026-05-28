@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../utils/crypto/totp.dart';
 import '../../utils/crypto/totp_store.dart';
 import '../../utils/crypto/password_store.dart';
+import '../../widgets/app_snackbars.dart';
 
 class RecycleBinScreen extends StatefulWidget {
   const RecycleBinScreen({super.key});
@@ -75,21 +76,15 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
   Future<void> copyTotpOrPassword(Map<String, String> item) async {
     if (item['itemType'] == 'totp') {
       final secret = item['secretcode'] ?? '';
-      if (secret.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Secret not available for this credential'), duration: Duration(seconds: 2)));
-        return;
-      }
-
       final code = Totp.generate( secret: secret, digits: 6, period: 30, time: DateTime.now().millisecondsSinceEpoch ~/1000);
       await Clipboard.setData(ClipboardData(text: code));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('TOTP copied to clipboard'), duration: Duration(seconds: 2)));
+      AppSnackBars.showCustomSnackBar(context: context, message: 'Code copied to clipboard', textColor: Colors.blue);
     } else {
       final password = item['password'] ?? '';
       await Clipboard.setData(ClipboardData(text: password));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password copied to clipboard'), duration: Duration(seconds: 2)));
+      AppSnackBars.showCustomSnackBar(context: context, message: 'Password copied to clipboard', textColor: Colors.blue);
     }
   }
 
@@ -108,7 +103,7 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
     if (restored) {
       await loadRecycleBin();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(item['itemType'] == 'totp' ? 'Authenticator restored' : 'Password restored'), duration: const Duration(seconds: 2)));
+      AppSnackBars.showCustomSnackBar(context: context, message: item['itemType'] == 'totp' ? 'Authenticator restored' : 'Password restored', textColor: Colors.lightGreenAccent.shade700);
     }
   }
 
@@ -120,7 +115,7 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
       context: context,
       builder: (context) => AlertDialog( 
         title: const Text('Delete permanently?'),
-        content: const Text('This will remove the item from this device forever. It cannot be restored after this step.'),
+        content: const Text('This will remove the item from this device forever. However, it can be added back from a synced device.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete permanently', style: TextStyle(color: Colors.red))),
@@ -140,7 +135,7 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
     if (deleted) {
       await loadRecycleBin();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar( const SnackBar( content: Text('Item permanently deleted from this device'), duration: Duration(seconds: 2)));
+      AppSnackBars.showCustomSnackBar(context: context, message: 'Item permanently deleted from this device', textColor: Colors.red);
     }
   }
 

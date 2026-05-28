@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../utils/services/storage_service.dart';
 import '../../utils/services/export_service.dart';
@@ -14,6 +13,7 @@ import 'view_qr_screen.dart';
 import 'about_screen.dart';
 import 'support_screen.dart';
 import 'recycle_bin_screen.dart';
+import '../../widgets/app_snackbars.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -60,10 +60,10 @@ class SettingsScreenState extends State<SettingsScreen> {
         if (!mounted) return;
         if (success) {
           setState(() => isBiometricEnabled = true);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Biometric unlock enabled'),  duration: Duration(seconds: 2)));
+          AppSnackBars.showCustomSnackBar(context: context, message: 'Biometric unlock enabled', textColor: Colors.blue);
         } else {
           setState(() => isBiometricEnabled = false);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error ?? 'Failed to enable biometric', style: const TextStyle(color: Colors.red)), duration: const Duration(seconds: 2)));
+          AppSnackBars.showCustomSnackBar(context: context, message: error ?? 'Failed to enable biometric', textColor: Colors.red);
         }
       }
     } else {
@@ -71,11 +71,11 @@ class SettingsScreenState extends State<SettingsScreen> {
         await BiometricService.disableBiometric();
         setState(() => isBiometricEnabled = false);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar( content: Text('Biometric unlock disabled'), duration: Duration(seconds: 2)));
+        AppSnackBars.showCustomSnackBar(context: context, message: 'Biometric unlock disabled', textColor: Colors.blue);
       } catch (e) {
         if (!mounted) return;
         setState(() => isBiometricEnabled = true);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to disable biometric', style: const TextStyle(color: Colors.red)), duration: const Duration(seconds: 2)));
+        AppSnackBars.showCustomSnackBar(context: context, message: 'Failed to disable biometric', textColor: Colors.red);
       }
     }
   }
@@ -94,7 +94,7 @@ class SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password reset successfully'), duration: Duration(seconds: 2)));
+      AppSnackBars.showCustomSnackBar(context: context, message: 'Password reset successfully', textColor: Colors.greenAccent.shade700);
     }
   }
 
@@ -102,106 +102,18 @@ class SettingsScreenState extends State<SettingsScreen> {
     final hasCredentials = await ExportService.hasExportableCredentials();
     if (!hasCredentials) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No credentials to export'), duration: Duration(seconds: 2)));
+      AppSnackBars.showCustomSnackBar(context: context, message: 'No credentials to export', textColor: Colors.red);
       return;
     }
 
-    final saved = await askExportFileName();
-    if (saved == null || !saved) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export cancelled'), duration: Duration(seconds: 2)));
-      return;
-    }
-
+    final (success, message) = await ExportService.exportToCsv();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File saved successfully'), duration: Duration(seconds: 3)));
-  }
 
-  Future<bool?> askExportFileName() async {
-    final controller = TextEditingController(
-      text: ExportService.defaultExportBaseName(),
-    );
-    String? errorText;
-    var isSaving = false;
-
-    final value = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Save To Downloads'),
-              content: TextField(
-                controller: controller,
-                autofocus: true,
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_-]'))],
-                decoration:
-                    const InputDecoration(labelText: 'File name', border: OutlineInputBorder(),)
-                    .copyWith(
-                      suffixText: '.csv',
-                      suffixStyle: const TextStyle(color: Colors.grey),
-                      helperText: errorText == null ? 'Keep the file safe.' : null,
-                      errorText: errorText,
-                    ),
-                onChanged: (_) {
-                  if (errorText != null) {
-                    setDialogState(() {
-                      errorText = null;
-                    });
-                  }
-                },
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving ? null : () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          final enteredName = controller.text.trim();
-                          if (enteredName.isEmpty) {
-                            setDialogState(() {
-                              errorText = 'File name is required';
-                            });
-                            return;
-                          }
-
-                          setDialogState(() {
-                            errorText = null;
-                            isSaving = true;
-                          });
-
-                          final (
-                            success,
-                            message,
-                          ) = await ExportService.exportToCsv(
-                            fileName: enteredName,
-                          );
-
-                          if (!mounted) return;
-
-                          if (success) {
-                            Navigator.pop(context, true);
-                            return;
-                          }
-
-                          setDialogState(() {
-                            isSaving = false;
-                            errorText = message;
-                          });
-                        },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-    controller.dispose();
-    return value;
+    if (success) {
+      AppSnackBars.showCustomSnackBar(context: context, message: message, textColor: Colors.greenAccent.shade700);
+    } else {
+      AppSnackBars.showCustomSnackBar(context: context,  message: message, textColor: Colors.red);
+    }
   }
 
   Future<void> importCredentials() async {
@@ -220,7 +132,7 @@ class SettingsScreenState extends State<SettingsScreen> {
 
       if (result.files.single.path == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to access selected file'), duration: Duration(seconds: 3)));
+        AppSnackBars.showCustomSnackBar(context: context, message: 'Failed to access file', textColor: Colors.red);
         return;
       }
 
@@ -228,7 +140,7 @@ class SettingsScreenState extends State<SettingsScreen> {
       if (!mounted || importPassword == null) {
         if (!mounted) return;
         if (importPassword == null) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password input cancelled', style: TextStyle(color: Colors.red)), duration: Duration(seconds: 2)));
+          AppSnackBars.showCustomSnackBar(context: context, message: 'Password input cancelled', textColor: Colors.red);
         }
         return;
       }
@@ -254,14 +166,16 @@ class SettingsScreenState extends State<SettingsScreen> {
           ),
         );
 
+        if (!mounted) return;
         if (confirmed == true) {
           final (added, addMessage,) = await ImportService.addImportedCredentials(newTotps, newPasswords);
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(addMessage, style: TextStyle(color: added ? Colors.green : Colors.red)),duration: const Duration(seconds: 3)),
-          );
+          AppSnackBars.showCustomSnackBar(context: context, message: addMessage, textColor: added ? Colors.greenAccent.shade700 : Colors.red);
+        } else {
+          AppSnackBars.showCustomSnackBar(context: context, message: 'Import cancelled', textColor: Colors.red);
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message, style: const TextStyle(color: Colors.red)), duration: const Duration(seconds: 3)));
+        AppSnackBars.showCustomSnackBar(context: context, message: message, textColor: Colors.red);
       }
     } finally {
       AppLifecycleManager.preventPasswordClear = false;
@@ -291,6 +205,7 @@ class SettingsScreenState extends State<SettingsScreen> {
                   errorText: errorText,
                   suffixIcon: IconButton(
                     icon: Icon(isVisible ? Icons.visibility : Icons.visibility_off),
+                    tooltip: isVisible ? 'Hide Password' : 'Show Password',
                     onPressed: () {
                       setDialogState(() {
                         isVisible = !isVisible;

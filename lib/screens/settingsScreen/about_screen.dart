@@ -151,12 +151,15 @@ class AboutScreen extends StatelessWidget {
                     children: [
                       Column(
                         children: [
-                          GestureDetector(
-                            onTap: () async {
-                              final uri = Uri.parse('https://www.github.com/ppriyanshu26/',);
-                              await launchUrl(uri, mode: LaunchMode.externalApplication);
-                            },
-                            child: Image.asset('assets/social/github.png', width: 40, height: 40),
+                          Tooltip(
+                            message: 'Open GitHub Profile',
+                            child: GestureDetector(
+                              onTap: () async {
+                                final uri = Uri.parse('https://www.github.com/ppriyanshu26/',);
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              },
+                              child: Image.asset('assets/social/github.png', width: 40, height: 40),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           const Text('ppriyanshu26', style: TextStyle(fontSize: 12)),
@@ -165,12 +168,15 @@ class AboutScreen extends StatelessWidget {
                       const SizedBox(width: 24),
                       Column(
                         children: [
-                          GestureDetector(
-                            onTap: () async {
-                              final uri = Uri.parse('https://www.linkedin.com/in/ppriyanshu26/');
-                              await launchUrl( uri, mode: LaunchMode.externalApplication);
-                            },
-                            child: Image.asset('assets/social/linkedin.png', width: 40, height: 40),
+                          Tooltip(
+                            message: 'Open LinkedIn Profile',
+                            child: GestureDetector(
+                              onTap: () async {
+                                final uri = Uri.parse('https://www.linkedin.com/in/ppriyanshu26/');
+                                await launchUrl( uri, mode: LaunchMode.externalApplication);
+                              },
+                              child: Image.asset('assets/social/linkedin.png', width: 40, height: 40),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           const Text('ppriyanshu26', style: TextStyle(fontSize: 12)),
@@ -179,12 +185,15 @@ class AboutScreen extends StatelessWidget {
                       const SizedBox(width: 24),
                       Column(
                         children: [
-                          GestureDetector(
-                            onTap: () async {
-                              final uri = Uri.parse('https://www.instagram.com/ppriyanshu26_/');
-                              await launchUrl(uri, mode: LaunchMode.externalApplication);
-                            },
-                            child: Image.asset('assets/social/instagram.png', width: 40, height: 40),
+                          Tooltip(
+                            message: 'Open Instagram Profile',
+                            child: GestureDetector(
+                              onTap: () async {
+                                final uri = Uri.parse('https://www.instagram.com/ppriyanshu26_/');
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              },
+                              child: Image.asset('assets/social/instagram.png', width: 40, height: 40),
+                            ),
                           ),
                           const SizedBox(height: 8),
                           const Text('ppriyanshu26_', style: TextStyle(fontSize: 12)),

@@ -8,6 +8,7 @@ import 'add_account_screen.dart';
 import '../settingsScreen/settings_screen.dart';
 import 'package:flutter/services.dart';
 import 'authenticator_card.dart';
+import '../../widgets/app_snackbars.dart';
 
 class AuthenticatorScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -212,7 +213,7 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
         onTap: () {
           Clipboard.setData(ClipboardData(text: code));
           HapticFeedback.lightImpact();
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code copied to clipboard'), duration: Duration(seconds: 2)));
+          AppSnackBars.showCustomSnackBar(context: context, message: 'Code copied to clipboard', textColor: Colors.blue);
         },
         onLongPress: () async {
           HapticFeedback.heavyImpact();
@@ -230,24 +231,23 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
             
             var undoPressed = false;
             Timer? autoCloseTimer;
-            final deleteSnackBarController = messenger.showSnackBar(
-              SnackBar(content: const Text('Credential moved to recycle bin'), duration: const Duration(seconds: 3),
-                action: SnackBarAction(
-                  label: 'UNDO',
-                  onPressed: () async {
-                    undoPressed = true;
-                    autoCloseTimer?.cancel();
-                    final restored = await TotpStore.restoreFromRecycleBin(id);
-                    if (!restored || !mounted) return;
-                    widget.refreshNotifier.value++;
-                    if (!mounted) return;
-                    messenger.hideCurrentSnackBar();
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('Credential restored'), duration: Duration(seconds: 2)),
-                    );
-                  },
-                ),
-              ),
+            final deleteSnackBarController = AppSnackBars.showCustomSnackBar(
+              context: context,
+              message: 'Credential moved to recycle bin',
+              textColor: Colors.blue,
+              actionLabel: 'UNDO',
+              onActionPressed: () async {
+                undoPressed = true;
+                autoCloseTimer?.cancel();
+                
+                final restored = await TotpStore.restoreFromRecycleBin(id);
+                if (!restored || !mounted) return;
+                
+                widget.refreshNotifier.value++;
+                if (!mounted) return;
+                
+                AppSnackBars.showCustomSnackBar(context: context, message: 'Credential restored', textColor: Colors.blue);
+              },
             );
             
             autoCloseTimer = Timer(const Duration(seconds: 3), () {
@@ -322,6 +322,7 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
+            tooltip: 'Open Settings',
             onPressed: () async {
               searchFocusNode.unfocus();
               await Navigator.push(
@@ -384,6 +385,7 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
       floatingActionButton: FloatingActionButton(
         heroTag: null,
         onPressed: addAccount,
+        tooltip: 'Add New Account',
         backgroundColor: Colors.orange.withValues(alpha: 0.5),
         child: const Icon(Icons.add),
       ),

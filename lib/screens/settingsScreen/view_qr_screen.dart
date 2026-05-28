@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../utils/crypto/totp_store.dart';
 import '../../utils/services/storage_service.dart';
+import '../../widgets/app_snackbars.dart';
 
 class ViewQrScreen extends StatefulWidget {
   const ViewQrScreen({super.key});
@@ -95,6 +96,7 @@ class ViewQrScreenState extends State<ViewQrScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   suffixIcon: IconButton(
                     icon: Icon(isPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                    tooltip: isPasswordVisible ? 'Hide Password' : 'Show Password',
                     onPressed: () {
                       setState(() {
                         isPasswordVisible = !isPasswordVisible;
@@ -262,7 +264,7 @@ class ViewQrScreenState extends State<ViewQrScreen> {
 
                   final messenger = ScaffoldMessenger.of(context);
                   messenger.hideCurrentSnackBar();
-                  messenger.showSnackBar(const SnackBar(content: Text('Secret key copied'), duration: Duration(seconds: 2)));
+                  AppSnackBars.showCustomSnackBar(context: context, message: 'Secret key copied', textColor: Colors.blue);
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

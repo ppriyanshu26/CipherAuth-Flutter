@@ -57,7 +57,7 @@ class ImportService {
       try {
         csvContent = await CsvCrypto.decryptCsv(encryptedContent, password);
       } catch (_) {
-        return (false, 'Failed to decrypt file. Check password or file format.', <Map<String, String>>[], <Map<String, String>>[]);
+        return (false, 'Failed to decrypt file', <Map<String, String>>[], <Map<String, String>>[]);
       }
 
       final rows = parseCsv(csvContent);
@@ -149,8 +149,8 @@ class ImportService {
       }
 
       return (true, 'Found ${newTotps.length} new authenticator(s) and ${newPasswords.length} new password(s)', newTotps, newPasswords);
-    } catch (e) {
-      return (false, 'Import failed: ${e.toString()}', <Map<String, String>>[], <Map<String, String>>[]);
+    } catch (_) {
+      return (false, 'Import failed', <Map<String, String>>[], <Map<String, String>>[]);
     }
   }
 
@@ -215,9 +215,9 @@ class ImportService {
         await PasswordStore.removeFromRecycleBinEntries(importedIds);
       }
 
-      return (true, 'Import successfully completed.');
-    } catch (e) {
-      return (false, 'Failed to add credentials: ${e.toString()}');
+      return (true, 'Import successfully completed');
+    } catch (_) {
+      return (false, 'Failed to add credentials');
     }
   }
 }

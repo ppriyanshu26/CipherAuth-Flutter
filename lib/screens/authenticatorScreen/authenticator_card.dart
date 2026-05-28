@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../utils/crypto/totp_store.dart';
+import '../../widgets/app_snackbars.dart';
 
 class MouseWheelHorizontalScroll extends StatefulWidget {
   final Widget child;
@@ -71,12 +72,7 @@ class AuthenticatorCardState extends State<AuthenticatorCard> {
   void copyToClipboard(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
     HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label copied to clipboard'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    AppSnackBars.showCustomSnackBar(context: context, message: '$label copied to clipboard', textColor: Colors.blue);
   }
 
   String formatDateString(String dateStr) {
@@ -144,6 +140,7 @@ class AuthenticatorCardState extends State<AuthenticatorCard> {
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
                   onPressed: deleteAccount,
+                  tooltip: 'Delete Account',
                   visualDensity: VisualDensity.compact,
                 ),
               ],
@@ -173,6 +170,7 @@ class AuthenticatorCardState extends State<AuthenticatorCard> {
                         IconButton(
                           icon: const Icon(Icons.copy, size: 20),
                           onPressed: () => copyToClipboard(item['username']!, 'Username'),
+                          tooltip: 'Copy Username',
                           visualDensity: VisualDensity.compact,
                         ),
                     ],

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'add_password_screen.dart';
 import '../../utils/crypto/password_store.dart';
+import '../../widgets/app_snackbars.dart';
 
 class MouseWheelHorizontalScroll extends StatefulWidget {
   final Widget child;
@@ -94,12 +95,7 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
   void copyToClipboard(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
     HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$label copied to clipboard'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    AppSnackBars.showCustomSnackBar(context: context,  message: '$label copied to clipboard',  textColor: Colors.blue);
   }
 
   String formatDateString(String dateStr) {
@@ -134,10 +130,7 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
         content: Text('Are you sure you want to delete ${item['name']}?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -177,11 +170,13 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
                 IconButton(
                   icon: Icon(obscurePassword ? Icons.visibility : Icons.visibility_off, size: 20),
                   onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                  tooltip: obscurePassword ? 'Show Password' : 'Hide Password',
                   visualDensity: VisualDensity.compact,
                 ),
               IconButton(
                 icon: const Icon(Icons.copy, size: 20),
                 onPressed: () => copyToClipboard(value, title),
+                tooltip: 'Copy Field',
                 visualDensity: VisualDensity.compact,
               ),
             ],
@@ -220,11 +215,13 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
                   IconButton(
                     icon: const Icon(Icons.edit, size: 20),
                     onPressed: editPassword,
+                    tooltip: 'Edit Password Details',
                     visualDensity: VisualDensity.compact,
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
                     onPressed: deletePassword,
+                    tooltip: 'Delete Password',
                     visualDensity: VisualDensity.compact,
                   ),
                 ],
@@ -232,7 +229,7 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
             ],
           ),
           const Divider(),
-          buildRow('Username/Email', item['username'] ?? ''),
+          buildRow('Username', item['username'] ?? ''),
           buildRow('Password', item['password'] ?? '', isPassword: true),
           buildRow('URL / Domain', item['domain'] ?? ''),
           const SizedBox(height: 8),
@@ -281,6 +278,7 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
                 IconButton(
                   icon: const Icon(Icons.copy, size: 20),
                   onPressed: () => copyToClipboard(notes, 'Notes'),
+                  tooltip: 'Copy Notes',
                   visualDensity: VisualDensity.compact,
                 ),
             ],

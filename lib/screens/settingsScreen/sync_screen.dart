@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../utils/sync/sync_service.dart';
+import '../../utils/services/sync_service.dart';
 import '../../utils/sync/sync_connection.dart';
 import '../../utils/crypto/totp_store.dart';
 import '../../utils/crypto/password_store.dart';
 import '../../utils/crypto/runtime_key.dart';
+import '../../widgets/app_snackbars.dart';
 
 class SyncScreen extends StatefulWidget {
   const SyncScreen({super.key});
@@ -92,10 +93,9 @@ class SyncScreenState extends State<SyncScreen> {
     } catch (_) {}
 
     await broadcaster.startBroadcasting(deviceName);
-    await scanForDevices();
-
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Device name updated', style: TextStyle(color: Colors.green))));
+    AppSnackBars.showCustomSnackBar(context: context, message: 'Device name updated', textColor: Colors.green);
+    await scanForDevices();
   }
 
   void startListeningAsServer() {
@@ -111,7 +111,7 @@ class SyncScreenState extends State<SyncScreen> {
       (mergedTotps, mergedPasswords, peerName) async {
         await loadLocalData();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sync successful with $peerName', style: const TextStyle(color: Colors.green))));
+          AppSnackBars.showCustomSnackBar(context: context, message: 'Sync successful', textColor: Colors.greenAccent.shade700);
         }
       },
     );
@@ -147,16 +147,15 @@ class SyncScreenState extends State<SyncScreen> {
 
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sync successful with $name', style: const TextStyle(color: Colors.green))));
+      AppSnackBars.showCustomSnackBar(context: context, message: 'Sync successful', textColor: Colors.greenAccent.shade700);
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
 
       final errorMsg = e is FormatException && e.message.contains('password mismatch')
-          ? 'Sync failed: Password mismatch.'
+          ? 'Password mismatch'
           : 'Sync failed';
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg, style: const TextStyle(color: Colors.red))));
+      AppSnackBars.showCustomSnackBar(context: context, message: errorMsg, textColor: Colors.red);
     }
   }
 
@@ -174,7 +173,7 @@ class SyncScreenState extends State<SyncScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Device Sync'), scrolledUnderElevation: 0,
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: scanForDevices)],
+        actions: [IconButton(icon: const Icon(Icons.refresh), tooltip: 'Refresh Devices', onPressed: scanForDevices)],
       ),
       body: Column(
         children: [
@@ -192,7 +191,7 @@ class SyncScreenState extends State<SyncScreen> {
                 Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('Both devices must be on the same Wi-Fi network. Please disable any VPNs or services that change your IP address to ensure discovery works.',
+                  child: Text('Sync is now compatible only with CipherAuth version 8 or later.\nDevices must be on the same Wi-Fi network.\nPlease disable any VPNs or services that change your IP address.',
                     style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ),
@@ -207,7 +206,7 @@ class SyncScreenState extends State<SyncScreen> {
               decoration: InputDecoration(
                 labelText: 'This Device Name',
                 border: OutlineInputBorder(),
-                suffixIcon: IconButton(icon: const Icon(Icons.check), onPressed: saveDeviceName, tooltip: 'Save device name'),
+                suffixIcon: IconButton(icon: const Icon(Icons.check), onPressed: saveDeviceName, tooltip: 'Save Device Name'),
               ),
               onSubmitted: (_) => saveDeviceName(),
             ),

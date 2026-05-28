@@ -7,6 +7,7 @@ import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart
 import 'package:permission_handler/permission_handler.dart';
 import '../../utils/crypto/totp_store.dart';
 import '../../utils/services/qr_decoder_service.dart';
+import '../../widgets/app_snackbars.dart';
 
 class AddAccountScreen extends StatefulWidget {
   final String? initialUrl;
@@ -170,12 +171,7 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
       });
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Flashlight is not available on this device'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      AppSnackBars.showCustomSnackBar(context: context, message: 'Flashlight is not available on this device', textColor: Colors.red);
     }
   }
 
@@ -217,15 +213,7 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
 
       if (value == null || !value.startsWith('otpauth://')) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Unable to read QR code',
-              style: TextStyle(color: Colors.red),
-            ),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        AppSnackBars.showCustomSnackBar(context: context, message: 'Unable to read QR code', textColor: Colors.red);
         return;
       }
 
@@ -237,9 +225,7 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
       setState(() => isScanningImage = false);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error scanning image', style: TextStyle(color: Colors.red))),
-      );
+      AppSnackBars.showCustomSnackBar(context: context, message: 'Error scanning image', textColor: Colors.red); 
     }
   }
 
@@ -323,7 +309,7 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
                           ElevatedButton.icon(
                             onPressed: openCameraSettings,
                             icon: const Icon(Icons.settings),
-                            label: const Text('Open Settings'),
+                            label: const Text('Open App Permissions'),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(

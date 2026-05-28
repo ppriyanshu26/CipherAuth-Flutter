@@ -152,9 +152,8 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
                       labelText: 'Master Password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          obscure1 ? Icons.visibility : Icons.visibility_off,
-                        ),
+                        icon: Icon(obscure1 ? Icons.visibility : Icons.visibility_off),
+                        tooltip: obscure1 ? 'Show Password' : 'Hide Password',
                         onPressed: () => setState(() => obscure1 = !obscure1),
                       ),
                     ),
@@ -169,9 +168,8 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
                       labelText: 'Confirm Password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          obscure2 ? Icons.visibility : Icons.visibility_off,
-                        ),
+                        icon: Icon(obscure2 ? Icons.visibility : Icons.visibility_off),
+                        tooltip: obscure2 ? 'Show Password' : 'Hide Password',
                         onPressed: () => setState(() => obscure2 = !obscure2),
                       ),
                     ),
@@ -189,7 +187,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: create,
-                      child: const Text('Create'),
+                      child: const Text('Create'),                     
                     ),
                   ),
                 ],

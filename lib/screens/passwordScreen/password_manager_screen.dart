@@ -6,6 +6,7 @@ import '../../utils/crypto/password_store.dart';
 import 'add_password_screen.dart';
 import '../settingsScreen/settings_screen.dart';
 import 'password_flip_card.dart';
+import '../../widgets/app_snackbars.dart';
 
 class PasswordManagerScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -127,17 +128,7 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
     if (result is String) {
       widget.refreshNotifier.value++;
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            existingItem == null
-                ? 'Password added successfully'
-                : 'Password updated successfully',
-            style: const TextStyle(color: Colors.green),
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      AppSnackBars.showCustomSnackBar(context: context, message: existingItem == null ? 'Password added successfully' : 'Password updated successfully', textColor: Colors.greenAccent.shade700);
     } else {
       widget.refreshNotifier.value++;
     }
@@ -178,6 +169,7 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
+            tooltip: 'Open Settings',
             onPressed: () async {
               searchFocusNode.unfocus();
               await Navigator.push(
@@ -259,12 +251,7 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
                                       ClipboardData(text: pass),
                                     );
                                     HapticFeedback.lightImpact();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Password copied to clipboard'),
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
+                                    AppSnackBars.showCustomSnackBar(context: context, message: 'Password copied to clipboard', textColor: Colors.blue);
                                   },
                                   onLongPress: () async {
                                     HapticFeedback.heavyImpact();
@@ -285,37 +272,24 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
                                       var undoPressed = false;
                                       Timer? autoCloseTimer;
 
-                                      final deleteSnackBarController = messenger
-                                          .showSnackBar(
-                                            SnackBar(
-                                              content: const Text('Password moved to recycle bin'),
-                                              duration: const Duration(seconds: 3),
-                                              action: SnackBarAction(
-                                                label: 'UNDO',
-                                                onPressed: () async {
-                                                  undoPressed = true;
-                                                  autoCloseTimer?.cancel();
-                                                  final restored =
-                                                      await PasswordStore.restoreFromRecycleBin(
-                                                        id,
-                                                      );
-                                                  if (!restored || !mounted) return;                                   
-                                                  widget
-                                                      .refreshNotifier
-                                                      .value++;
-                                                  if (!mounted) return;
-                                                  messenger
-                                                      .hideCurrentSnackBar();
-                                                  messenger.showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text( 'Password restored'),
-                                                      duration: Duration(seconds: 2),
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          );
+                                      final deleteSnackBarController = AppSnackBars.showCustomSnackBar(
+                                        context: context,
+                                        message: 'Password moved to recycle bin',
+                                        textColor: Colors.blue,
+                                        actionLabel: 'UNDO',
+                                        onActionPressed: () async {
+                                          undoPressed = true;
+                                          autoCloseTimer?.cancel();
+                                          
+                                          final restored = await PasswordStore.restoreFromRecycleBin(id);
+                                          if (!restored || !mounted) return;
+                                          
+                                          widget.refreshNotifier.value++;
+                                          if (!mounted) return;
+                                          
+                                          AppSnackBars.showCustomSnackBar(context: this.context, message: 'Password restored', textColor: Colors.lightGreenAccent.shade700);
+                                        },
+                                      );
                                       autoCloseTimer = Timer(
                                         const Duration(seconds: 3),
                                         () {
@@ -339,6 +313,7 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: null,
+        tooltip: 'Add New Password',
         onPressed: () => openAddOrEdit(),
         backgroundColor: Colors.orange.withValues(alpha: 0.5),
         child: const Icon(Icons.add),

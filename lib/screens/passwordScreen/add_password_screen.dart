@@ -181,6 +181,7 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
               decoration: InputDecoration(labelText: 'Password', border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   icon: Icon(obscurePassword ? Icons.visibility : Icons.visibility_off),
+                  tooltip: obscurePassword ? 'Show Password' : 'Hide Password',
                   onPressed: () => setState(() => obscurePassword = !obscurePassword),
                 ),
               ),

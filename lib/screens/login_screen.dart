@@ -112,7 +112,7 @@ class LoginScreenState extends State<LoginScreen> {
         );
       } else {
         setState(() {
-          error = 'Biometric password not found. Please enter manually.';
+          error = 'Biometric password not found';
           isAuthenticating = false;
         });
       }
@@ -194,9 +194,8 @@ class LoginScreenState extends State<LoginScreen> {
                       labelText: 'Master Password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          obscure ? Icons.visibility : Icons.visibility_off,
-                        ),
+                        icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                        tooltip: obscure ? 'Show Password' : 'Hide Password',
                         onPressed: () => setState(() => obscure = !obscure),
                       ),
                     ),
@@ -204,10 +203,7 @@ class LoginScreenState extends State<LoginScreen> {
                   if (error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        error!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
+                      child: Text(error!, style: const TextStyle(color: Colors.red)),
                     ),
                   const SizedBox(height: 12),
                   SizedBox(
