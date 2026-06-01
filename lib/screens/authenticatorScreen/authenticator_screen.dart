@@ -9,6 +9,7 @@ import '../settingsScreen/settings_screen.dart';
 import 'package:flutter/services.dart';
 import 'authenticator_card.dart';
 import '../../widgets/app_snackbars.dart';
+import '../../widgets/passphrase_generator_dialog.dart';
 
 class AuthenticatorScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -320,6 +321,19 @@ class AuthenticatorScreenState extends State<AuthenticatorScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text("Authenticator"), scrolledUnderElevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.lock_reset),
+            tooltip: 'Passphrase Generator',
+            onPressed: () {
+              searchFocusNode.unfocus();
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return const PassphraseGeneratorDialog();
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Open Settings',

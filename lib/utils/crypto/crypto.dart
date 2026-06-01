@@ -47,10 +47,7 @@ class Crypto {
     return utf8.decode(clear);
   }
 
-  static Future<String> encryptAesWithPassword(
-    String plaintext,
-    String password,
-  ) async {
+  static Future<String> encryptAesWithPassword(String plaintext, String password) async {
     final key = sha256.convert(utf8.encode(password)).bytes;
     final nonce = randomBytes(12);
     final aes = AesGcm.with256bits();
@@ -65,10 +62,7 @@ class Crypto {
     return base64UrlEncode(nonce + box.cipherText + box.mac.bytes);
   }
 
-  static Future<String> decryptAesWithPassword(
-    String ciphertext,
-    String password,
-  ) async {
+  static Future<String> decryptAesWithPassword(String ciphertext, String password) async {
     final data = base64Url.decode(ciphertext);
     final nonce = data.sublist(0, 12);
     final mac = Mac(data.sublist(data.length - 16));

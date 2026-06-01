@@ -41,17 +41,65 @@ class PasswordStore {
 
   static int getDeletedAtMillis(Map<String, String> item) => int.tryParse(item['deletedAt'] ?? '') ?? 0;
 
-  static bool hasCredentialConflict(List<Map<String, String>> items, String domain, String username, { String? ignoreId}) {
-    final normalizedDomain = domain.trim().toLowerCase();
-    final normalizedUsername = username.trim().toLowerCase();
+  static int getFreshnessMillis(Map<String, String> item) {
+    final createdAt = parseTimestampToMillis(item['createdAt'] ?? '');
+    final updatedAt = parseTimestampToMillis(item['updatedAt'] ?? '');
+    return createdAt > updatedAt ? createdAt : updatedAt;
+  }
 
-    return items.any((item) {
-      final itemId = item['id'] ?? '';
-      if (ignoreId != null && itemId == ignoreId) return false;
+  static int comparePasswordRows(Map<String, String> a, Map<String, String> b) {
+    final freshnessA = getFreshnessMillis(a);
+    final freshnessB = getFreshnessMillis(b);
+    if (freshnessA != freshnessB) return freshnessA.compareTo(freshnessB);
 
-      return (item['domain'] ?? '').trim().toLowerCase() == normalizedDomain &&
-          (item['username'] ?? '').trim().toLowerCase() == normalizedUsername;
-    });
+    final updatedA = parseTimestampToMillis(a['updatedAt'] ?? '');
+    final updatedB = parseTimestampToMillis(b['updatedAt'] ?? '');
+    if (updatedA != updatedB) return updatedA.compareTo(updatedB);
+
+    final createdA = parseTimestampToMillis(a['createdAt'] ?? '');
+    final createdB = parseTimestampToMillis(b['createdAt'] ?? '');
+    if (createdA != createdB) return createdA.compareTo(createdB);
+
+    final idA = (a['id'] ?? '').toLowerCase();
+    final idB = (b['id'] ?? '').toLowerCase();
+    if (idA != idB) return idA.compareTo(idB);
+    return 0;
+  }
+
+  static Map<String, String> selectPreferredPasswordRow(
+    List<Map<String, String>> rows,
+  ) {
+    var preferred = Map<String, String>.from(rows.first);
+
+    for (var i = 1; i < rows.length; i++) {
+      final candidate = Map<String, String>.from(rows[i]);
+      if (comparePasswordRows(candidate, preferred) >= 0) {
+        preferred = candidate;
+      }
+    }
+
+    return preferred;
+  }
+
+  static List<Map<String, String>> dedupePasswordRowsByLogicalKey(
+    List<Map<String, String>> rows,
+  ) {
+    final groupedRows = <String, List<Map<String, String>>>{};
+
+    for (final row in rows) {
+      final id = row['id'] ?? '';
+      if (id.isEmpty) continue;
+
+      groupedRows
+          .putIfAbsent(id, () => <Map<String, String>>[])
+          .add(Map<String, String>.from(row));
+    }
+
+    final merged = <Map<String, String>>[];
+    for (final rowsForKey in groupedRows.values) {
+      merged.add(selectPreferredPasswordRow(rowsForKey));
+    }
+    return merged;
   }
 
   static Map<String, String> normalizeActiveEntry(Map<String, dynamic> e) {
@@ -109,6 +157,10 @@ class PasswordStore {
     return list;
   }
 
+  static List<Map<String, String>> mergePasswordRowsByLogicalKey(List<Map<String, String>> localRows, List<Map<String, String>> remoteRows) {
+    return dedupePasswordRowsByLogicalKey([...localRows, ...remoteRows]);
+  }
+
   static String getFormattedTimestamp() {
     final now = DateTime.now();
     final day = now.day.toString().padLeft(2, '0');
@@ -130,11 +182,11 @@ class PasswordStore {
     try {
       final decrypted = await Crypto.decryptAes(encrypted);
       final decoded = jsonDecode(decrypted) as List<dynamic>;
-      final credentials = decoded
+      final credentials = dedupePasswordRowsByLogicalKey(decoded
           .whereType<Map>()
           .map((e) => normalizeActiveEntry(e.cast<String, dynamic>()))
           .where((e) => e['id']!.isNotEmpty)
-          .toList();
+          .toList());
 
       final recycleBin = await getRecycleBin(purgeExpired: true);
       final recycleBinMap = <String, int>{
@@ -254,92 +306,31 @@ class PasswordStore {
   static Future<void> saveAllAndMerge(List<Map<String, String>> remoteActive, List<Map<String, String>> remoteRecycleBin) async {
     final localActive = await load();
     final localRecycleBin = await getRecycleBin(purgeExpired: true);
-    final mergedActiveById = <String, Map<String, String>>{};
-
-    void mergeActiveRow(Map<String, String> row) {
-      final id = row['id'] ?? '';
-      if (id.isEmpty) return;
-
-      final normalized = Map<String, String>.from(row);
-      final existing = mergedActiveById[id];
-      if (existing == null) {
-        mergedActiveById[id] = normalized;
-        return;
-      }
-
-      final existingUpdatedAt = parseTimestampToMillis(
-        existing['updatedAt'] ?? existing['createdAt'] ?? '',
-      );
-      final incomingUpdatedAt = parseTimestampToMillis(
-        normalized['updatedAt'] ?? normalized['createdAt'] ?? '',
-      );
-
-      if (incomingUpdatedAt >= existingUpdatedAt) {
-        mergedActiveById[id] = normalized;
-      }
-    }
-
-    for (final row in localActive) {
-      mergeActiveRow(row);
-    }
-    for (final row in remoteActive) {
-      mergeActiveRow(row);
-    }
-
-    final mergedRecycleBin = mergeRecycleBins(
-      localRecycleBin,
-      remoteRecycleBin,
-    );
-    final recycleBinById = <String, Map<String, String>>{
-      for (final item in mergedRecycleBin)
-        if ((item['id'] ?? '').isNotEmpty) item['id']!: item,
-    };
+    final mergedRowsByKey = mergePasswordRowsByLogicalKey([...localActive, ...localRecycleBin], [...remoteActive, ...remoteRecycleBin]);
 
     final finalActive = <Map<String, String>>[];
-    for (final item in mergedActiveById.values) {
-      final id = item['id'] ?? '';
-      if (id.isEmpty) continue;
+    final finalRecycleBin = <Map<String, String>>[];
 
-      final deletedItem = recycleBinById[id];
-      final deletedAt = deletedItem == null
-          ? 0
-          : getDeletedAtMillis(deletedItem);
-      if (deletedAt <= 0) {
+    for (final item in mergedRowsByKey) {
+      if ((item['deletedAt'] ?? '').isNotEmpty) {
+        finalRecycleBin.add(item);
+      } else {
         finalActive.add(item);
-        continue;
-      }
-
-      final activeAt = parseTimestampToMillis(
-        item['updatedAt'] ?? item['createdAt'] ?? '',
-      );
-      if (activeAt > deletedAt) {
-        finalActive.add(item);
-        recycleBinById.remove(id);
       }
     }
-
-    final finalRecycleBin = recycleBinById.values.toList()
-      ..sort((a, b) => getDeletedAtMillis(b).compareTo(getDeletedAtMillis(a)));
 
     finalActive.sort(
       (a, b) => (a['name'] ?? '').toLowerCase().compareTo(
         (b['name'] ?? '').toLowerCase(),
       ),
     );
-
+    finalRecycleBin.sort((a, b) => getDeletedAtMillis(b).compareTo(getDeletedAtMillis(a)));
     await saveAll(finalActive);
     await saveRecyclleBin(finalRecycleBin);
   }
 
   static Future<String?> add( String name, String domain, String username, String password, String notes) async {
     final list = await load();
-    final recycleBin = await getRecycleBin(purgeExpired: true);
-    final existing = hasCredentialConflict(list, domain, username) || hasCredentialConflict(recycleBin, domain, username);
-
-    if (existing) {
-      throw Exception('An account for this username already exists on this url');
-    }
-
     final createdAtMillis = getCurrentTimestampMillis();
     final id = generateId(createdAtMillis);
     final now = getFormattedTimestamp();
@@ -363,13 +354,6 @@ class PasswordStore {
     final list = await load();
     final index = list.indexWhere((e) => e['id'] == oldId);
     if (index == -1) return null;
-    final recycleBin = await getRecycleBin(purgeExpired: true);
-
-    final hasConflict = hasCredentialConflict(list,  domain,  username,  ignoreId: oldId) || hasCredentialConflict(recycleBin,  domain,  username,  ignoreId: oldId);
-
-    if (hasConflict) {
-      throw Exception('An account for this username already exists on this url');
-    }
 
     final item = list[index];
     final now = getFormattedTimestamp();
@@ -415,11 +399,6 @@ class PasswordStore {
 
     final item = bin[index];
     final active = await load();
-    final hasConflict = hasCredentialConflict(active, item['domain'] ?? '', item['username'] ?? '', ignoreId: id);
-
-    if (hasConflict) {
-      return false;
-    }
     bin.removeAt(index);
     await saveRecyclleBin(bin);
 

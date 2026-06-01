@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/services/storage_service.dart';
 import 'login_screen.dart';
+import '../widgets/passphrase_generator_dialog.dart';
 
 class CreatePasswordScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -10,7 +11,7 @@ class CreatePasswordScreen extends StatefulWidget {
   State<CreatePasswordScreen> createState() => CreatePasswordScreenState();
 }
 
-class CreatePasswordScreenState extends State<CreatePasswordScreen> {
+class CreatePasswordScreenState extends State<CreatePasswordScreen> with SingleTickerProviderStateMixin {
   final passwordController = TextEditingController();
   final confirmController = TextEditingController();
 
@@ -18,16 +19,27 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   final passwordFocus = FocusNode();
   final confirmFocus = FocusNode();
   final passwordFieldKey = GlobalKey();
-
   bool obscure1 = true;
   bool obscure2 = true;
   String? error;
+  late AnimationController animationController;
+  late Animation<double> bounceAnimation;
+  bool showHint = true; 
 
   @override
   void initState() {
     super.initState();
     passwordFocus.addListener(handleFocusChange);
     confirmFocus.addListener(handleFocusChange);
+
+    animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    bounceAnimation = Tween<double>(begin: 0.0, end: 4.0).animate(
+      CurvedAnimation(parent: animationController, curve: Curves.easeInOut),
+    );
   }
 
   void handleFocusChange() {
@@ -66,14 +78,28 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
     final p1 = passwordController.text;
     final p2 = confirmController.text;
 
-    if (p1.length < 8) {
-      setState(() => error = 'Minimum 8 characters');
+    if (p1.length < 12) {
+      setState(() => error = 'Minimum 12 characters');
       return;
     }
     if (p1 != p2) {
       setState(() => error = 'Passwords do not match');
       return;
     }
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Warning'),
+        content: const Text('I agree that I have copied my password and saved it. If I forget it beyond this point, I can never reset it and recover my data.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('I Agree')),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
 
     final navigator = Navigator.of(context);
     await Storage.saveMasterPassword(p1);
@@ -85,13 +111,6 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
     );
   }
 
-  AppBar appBar(BuildContext context) {
-    return AppBar(
-      title: const Text('Create Your Password'),
-      scrolledUnderElevation: 0,
-    );
-  }
-
   @override
   void dispose() {
     passwordController.dispose();
@@ -99,6 +118,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
     scrollController.dispose();
     passwordFocus.dispose();
     confirmFocus.dispose();
+    animationController.dispose();
     super.dispose();
   }
 
@@ -106,7 +126,49 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
   Widget build(BuildContext context) {
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
-      appBar: appBar(context),
+      appBar: AppBar(title: const Text('Create Your Password'), scrolledUnderElevation: 0,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                if (showHint) {
+                  setState(() => showHint = false);
+                }
+                FocusScope.of(context).unfocus();
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return const PassphraseGeneratorDialog();
+                  },
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.lock_reset),
+                    if (showHint)
+                      AnimatedBuilder(
+                        animation: bounceAnimation,
+                        builder: (context, child) {
+                          return Transform.translate(
+                            offset: Offset(0, bounceAnimation.value),
+                            child: child,
+                          );
+                        },
+                        child: const Text('Click Here!!!!', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black)),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
@@ -133,7 +195,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'Keep your password safe. If you forget it, there is no way to recover your data because you are responsible for the safety of your accounts.',
+                    'This password will be used to keep your vault data encrypted, unreadable and completely local.\nIf you forget it, there is no way to recover your data.\nThe safety of YOUR data is YOUR responsibility.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.orange,

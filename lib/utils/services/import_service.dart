@@ -64,36 +64,39 @@ class ImportService {
       if (rows.isEmpty) {
         return (false, 'CSV file is empty', <Map<String, String>>[], <Map<String, String>>[]);
       }
+      final expectedColumnCount = rows.first.length;
       final dataRows = rows.sublist(1);
       if (dataRows.isEmpty) {
         return (false, 'No data rows found in CSV', <Map<String, String>>[], <Map<String, String>>[]);
       }
 
+      List<String> padRow(List<String> row) {
+        if (row.length >= expectedColumnCount) return row;
+        return [...row, ...List<String>.filled(expectedColumnCount - row.length, '')];
+      }
+
       final existingTotps = await TotpStore.load();
       final existingTotpIds = existingTotps.map((c) => c['id']).toSet();
-
-      final existingPasswords = await PasswordStore.load();
-      final existingPasswordKeys = existingPasswords.map((c) {
-        final domain = (c['domain'] ?? '').trim().toLowerCase();
-        final username = (c['username'] ?? '').trim().toLowerCase();
-        return '$domain|$username';
-      }).toSet();
 
       final newTotps = <Map<String, String>>[];
       final newPasswords = <Map<String, String>>[];
       for (final row in dataRows) {
-        if (row.isNotEmpty && (row[0].toLowerCase() == 'totp' || row[0].toLowerCase() == 'password')) {
-          final type = row[0].toLowerCase();
-          final title = row.length > 2 ? row[2].trim() : '';
-          final username = row.length > 3 ? row[3].trim() : '';
-          final secretOrPass = row.length > 4 ? row[4].trim() : '';
-          final domain = row.length > 5 ? row[5].trim() : '';
-          final notes = row.length > 6 ? row[6].trim() : '';
+        final paddedRow = padRow(row);
+
+        if (paddedRow.isNotEmpty && (paddedRow[0].toLowerCase() == 'totp' || paddedRow[0].toLowerCase() == 'password')) {
+          final type = paddedRow[0].toLowerCase();
+          final title = paddedRow.length > 2 ? paddedRow[2].trim() : '';
+          final username = paddedRow.length > 3 ? paddedRow[3].trim() : '';
+          final secretOrPass = paddedRow.length > 4 ? paddedRow[4].trim() : '';
+          final domain = paddedRow.length > 5 ? paddedRow[5].trim() : '';
+          final notes = paddedRow.length > 6 ? paddedRow[6].trim() : '';
+          final hasExtendedMetadata = paddedRow.length >= 10;
 
           if (type == 'totp') {
             final secret = secretOrPass.toUpperCase();
             if (title.isEmpty || username.isEmpty || secret.isEmpty) continue;
 
+            final createdAt = hasExtendedMetadata ? paddedRow[7].trim() : '';
             final id = TotpStore.generateId(title, username, secret);
             if (!existingTotpIds.contains(id)) {
               newTotps.add({
@@ -101,30 +104,31 @@ class ImportService {
                 'platform': title,
                 'username': username,
                 'secretcode': secret,
+                'createdAt': createdAt,
               });
             }
           } else if (type == 'password') {
             if (title.isEmpty || username.isEmpty || secretOrPass.isEmpty || domain.isEmpty) continue;
 
-            final passwordKey =
-                '${domain.trim().toLowerCase()}|${username.trim().toLowerCase()}';
-            if (!existingPasswordKeys.contains(passwordKey)) {
-              final createdAtMillis =
-                  DateTime.now().millisecondsSinceEpoch + newPasswords.length;
-              newPasswords.add({
-                'id': PasswordStore.generateId(createdAtMillis),
-                'name': title,
-                'domain': domain,
-                'username': username,
-                'password': secretOrPass,
-                'notes': notes,
-              });
-            }
+            final createdAt = hasExtendedMetadata ? paddedRow[7].trim() : '';
+            final updatedAt = hasExtendedMetadata ? paddedRow[8].trim() : '';
+            final csvId = paddedRow.length > 1 ? paddedRow[1].trim() : '';
+            final createdAtMillis = DateTime.now().millisecondsSinceEpoch+newPasswords.length;
+            newPasswords.add({
+              'id': csvId.isNotEmpty ? csvId : PasswordStore.generateId(createdAtMillis),
+              'name': title,
+              'domain': domain,
+              'username': username,
+              'password': secretOrPass,
+              'notes': notes,
+              'createdAt': createdAt,
+              'updatedAt': updatedAt,
+            });
           }
-        } else if (row.length >= 4) {
-          final platform = row[1].trim();
-          final username = row[2].trim();
-          final secret = row[3].trim().toUpperCase();
+        } else if (paddedRow.length >= 4) {
+          final platform = paddedRow[1].trim();
+          final username = paddedRow[2].trim();
+          final secret = paddedRow[3].trim().toUpperCase();
           if (platform.isEmpty || username.isEmpty || secret.isEmpty) continue;
 
           final id = TotpStore.generateId(platform, username, secret);
@@ -190,29 +194,19 @@ class ImportService {
       if (passwords.isNotEmpty) {
         final importTimestamp = PasswordStore.getFormattedTimestamp();
         final stampedPasswords = passwords.map(
-              (c) => {
-                ...c,
-                'createdAt': (c['createdAt'] == null || c['createdAt']!.isEmpty)
-                    ? importTimestamp
-                    : c['createdAt']!,
-                'updatedAt': importTimestamp,
+              (c) {
+                final createdAt = (c['createdAt'] ?? '').trim();
+                final updatedAt = (c['updatedAt'] ?? '').trim();
+                final resolvedCreatedAt = createdAt.isEmpty ? importTimestamp : createdAt;
+                return {
+                  ...c,
+                  'createdAt': resolvedCreatedAt,
+                  'updatedAt': updatedAt.isEmpty ? resolvedCreatedAt : updatedAt,
+                };
               },
-        ).toList();
-
-        final existing = await PasswordStore.load();
-        final combined = [...existing, ...stampedPasswords];
-        combined.sort(
-          (a, b) => (a['name'] ?? '').toLowerCase().compareTo(
-            (b['name'] ?? '').toLowerCase(),
-          ),
-        );
-
-        await PasswordStore.saveAll(combined);
-        final importedIds = stampedPasswords
-            .map((c) => c['id'] ?? '')
-            .where((id) => id.isNotEmpty)
+            )
             .toList();
-        await PasswordStore.removeFromRecycleBinEntries(importedIds);
+        await PasswordStore.saveAllAndMerge(stampedPasswords, const []);
       }
 
       return (true, 'Import successfully completed');

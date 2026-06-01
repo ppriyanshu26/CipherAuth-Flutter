@@ -16,7 +16,7 @@ class AppSnackBars {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               decoration: const ShapeDecoration(
-                color: Colors.black54,
+                color: Colors.black,
                 shape: StadiumBorder(),
               ),
               child: Row(
@@ -24,15 +24,16 @@ class AppSnackBars {
                 children: [
                   Text(
                     message,
-                    style: TextStyle(color: textColor),
+                    style: TextStyle(color: textColor, fontSize: 16.0),
                   ),
                   if (actionLabel != null && onActionPressed != null) ...[
-                    const SizedBox(width: 12.0), 
+                    const SizedBox(width: 12.0),
                     TextButton(
                       style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero, 
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
                       ),
                       onPressed: () {
                         ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -41,11 +42,12 @@ class AppSnackBars {
                       child: Text(
                         actionLabel,
                         style: const TextStyle(
-                          color: Colors.amber,
+                          color: Colors.red,
                           fontWeight: FontWeight.bold,
+                          fontSize: 16.0,
                         ),
                       ),
-                    ),
+                    )
                   ],
                 ],
               ),

@@ -7,7 +7,7 @@ class TotpStore {
   static const storeKey = 'totp_store';
   static const deletionLogKey = 'totp_deletion_log';
   static const recycleBinKey = 'totp_recycle_bin';
-  static const recycleBinRetentionMillis = 30 * 24 * 60 * 60 * 1000;
+  static const recycleBinRetentionMillis = 30*24*60*60*1000;
 
   static String generateId(String platform, String username, String secret) {
     final input = '$platform$username$secret';

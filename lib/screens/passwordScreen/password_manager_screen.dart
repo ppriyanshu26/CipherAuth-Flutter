@@ -7,6 +7,7 @@ import 'add_password_screen.dart';
 import '../settingsScreen/settings_screen.dart';
 import 'password_flip_card.dart';
 import '../../widgets/app_snackbars.dart';
+import '../../widgets/passphrase_generator_dialog.dart';
 
 class PasswordManagerScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -168,6 +169,19 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
       appBar: AppBar(title: const Text('Password Manager'), scrolledUnderElevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.lock_reset),
+            tooltip: 'Passphrase Generator',
+            onPressed: () {
+              searchFocusNode.unfocus();
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return const PassphraseGeneratorDialog();
+                },
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Open Settings',
             onPressed: () async {
@@ -287,7 +301,7 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
                                           widget.refreshNotifier.value++;
                                           if (!mounted) return;
                                           
-                                          AppSnackBars.showCustomSnackBar(context: this.context, message: 'Password restored', textColor: Colors.lightGreenAccent.shade700);
+                                          AppSnackBars.showCustomSnackBar(context: this.context, message: 'Password restored', textColor: Colors.blue);
                                         },
                                       );
                                       autoCloseTimer = Timer(
@@ -297,6 +311,9 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
                                           deleteSnackBarController.close();
                                         },
                                       );
+                                    } else if (result is Map && result['action'] == 'edited') {
+                                      if (!mounted) return;
+                                      AppSnackBars.showCustomSnackBar(context: this.context, message: 'Password updated successfully', textColor: Colors.greenAccent.shade700);
                                     }
                                   },
                                 ),

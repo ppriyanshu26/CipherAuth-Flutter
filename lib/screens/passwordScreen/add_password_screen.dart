@@ -54,6 +54,19 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
     setState(() => isDomainValid = allValid && parts.isNotEmpty);
   }
 
+  String normalizeDomainInput(String input) {
+    final parts = input.trim().split(RegExp(r'[,\n\s]+'));
+    final normalized = <String>[];
+
+    for (final part in parts) {
+      final value = part.trim();
+      if (value.isEmpty) continue;
+      final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*://').hasMatch(value);
+      normalized.add(hasScheme ? value : 'https://$value');
+    }
+    return normalized.join(', ');
+  }
+
   @override
   void dispose() {
     nameCtrl.dispose();
@@ -72,9 +85,35 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
     }).join(' ');
   }
 
+  String extractBaseDomain(String url) {
+    try {
+      String strUrl = url.trim().toLowerCase();
+      if (!strUrl.startsWith('http://') && !strUrl.startsWith('https://')) {
+        strUrl = 'https://$strUrl';
+      }
+      final uri = Uri.parse(strUrl);
+      String host = uri.host;
+      if (host.startsWith('www.')) {
+        host = host.substring(4);
+      }
+      final parts = host.split('.');
+      if (parts.length > 2) {
+        if (['co', 'com', 'net', 'org', 'ac']
+          .contains(parts[parts.length - 2])) {
+          return parts.sublist(parts.length - 3).join('.');
+        }
+        return parts.sublist(parts.length - 2).join('.');
+      }
+      return host;
+    } catch (_) {
+      return url;
+    }
+  }
+
   Future<void> savePassword() async {
     setState(() => error = null);
     final title = normalizeTitle(nameCtrl.text);
+    final normalizedDomain = normalizeDomainInput(domainCtrl.text).toLowerCase();
 
     if (title.isEmpty) {
       setState(() => error = 'Title is required');
@@ -98,11 +137,56 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
     }
 
     try {
+      final inputUsername = usernameCtrl.text.trim().toLowerCase();
+      final inputDomains = domainCtrl.text
+          .split(RegExp(r'[,\n\s]+'))
+          .where((e) => e.trim().isNotEmpty)
+          .map(extractBaseDomain)
+          .toSet();
+
+      final allPasswords = await PasswordStore.load();
+      for (var pwd in allPasswords) {
+        if (isEditing && pwd['id'] == widget.existingPassword?['id']) continue;
+
+        final pwdUsername = (pwd['username'] ?? '').toLowerCase();
+        if (pwdUsername != inputUsername) continue;
+
+        final pwdDomains = (pwd['domain'] ?? '')
+            .split(RegExp(r'[,\n\s]+'))
+            .where((e) => e.trim().isNotEmpty)
+            .map(extractBaseDomain)
+            .toSet();
+
+        if (pwdDomains.intersection(inputDomains).isNotEmpty) {
+          setState(() => error = 'Account with same username already exists');
+          return;
+        }
+      }
+
+      final binPasswords = await PasswordStore.getRecycleBin(
+        purgeExpired: true,
+      );
+      for (var pwd in binPasswords) {
+        final pwdUsername = (pwd['username'] ?? '').toLowerCase();
+        if (pwdUsername != inputUsername) continue;
+
+        final pwdDomains = (pwd['domain'] ?? '')
+            .split(RegExp(r'[,\n\s]+'))
+            .where((e) => e.trim().isNotEmpty)
+            .map(extractBaseDomain)
+            .toSet();
+
+        if (pwdDomains.intersection(inputDomains).isNotEmpty) {
+          setState(() => error = 'Account with same username presists bin');
+          return;
+        }
+      }
+
       if (isEditing) {
         final newId = await PasswordStore.update(
           widget.existingPassword!['id']!,
           title,
-          domainCtrl.text.trim().toLowerCase(),
+          normalizedDomain,
           usernameCtrl.text.trim().toLowerCase(),
           passwordCtrl.text,
           notesCtrl.text.trim(),
@@ -116,7 +200,7 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
       } else {
         final newId = await PasswordStore.add(
           title,
-          domainCtrl.text.trim().toLowerCase(),
+          normalizedDomain,
           usernameCtrl.text.trim().toLowerCase(),
           passwordCtrl.text,
           notesCtrl.text.trim(),
@@ -191,7 +275,7 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
               controller: domainCtrl,
               maxLines: null,
               keyboardType: TextInputType.multiline,
-              decoration: InputDecoration(labelText: 'Site URL(s)', border: const OutlineInputBorder(),
+              decoration: InputDecoration(labelText: 'Site URL', border: const OutlineInputBorder(),
                 errorText: domainCtrl.text.isNotEmpty && !isDomainValid ? 'Contains invalid domain format' : null,
               ),
             ),

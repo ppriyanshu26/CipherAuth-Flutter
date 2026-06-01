@@ -113,6 +113,7 @@ class AuthenticatorCardState extends State<AuthenticatorCard> {
   @override
   Widget build(BuildContext context) {
     final createdAt = item['createdAt'] ?? '';
+    final updatedAt = item['updatedAt'] ?? '';
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -179,11 +180,17 @@ class AuthenticatorCardState extends State<AuthenticatorCard> {
               ),
             ),
             const SizedBox(height: 8),
-            if (createdAt.isNotEmpty)
-              Text(
-                'Added: ${formatDateString(createdAt)}',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if ((item['id'] ?? '').isNotEmpty)
+                  Text('Credential Id: ${item['id']}', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                if (createdAt.isNotEmpty)
+                  Text('Created: ${formatDateString(createdAt)}', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                if (updatedAt.isNotEmpty)
+                  Text('Updated: ${formatDateString(updatedAt)}', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+              ],
+            ),
           ],
         ),
       ),

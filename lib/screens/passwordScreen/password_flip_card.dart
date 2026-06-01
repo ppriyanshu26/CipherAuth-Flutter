@@ -116,9 +116,8 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
       MaterialPageRoute(builder: (_) => AddPasswordScreen(existingPassword: item)),
     );
     if (result is String) {
-      final list = await PasswordStore.load();
-      final updatedItem = list.firstWhere((e) => e['id'] == result, orElse: () => item);
-      setState(() => item = updatedItem);
+      if (!mounted) return;
+      Navigator.pop(context, {'action': 'edited', 'id': result});
     }
   }
 
@@ -142,7 +141,7 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
     }
   }
 
-  Widget buildRow(String title, String value, {bool isPassword = false}) {
+  Widget buildRow(String title, String value, { bool isPassword = false, bool useMonospace = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -160,7 +159,7 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
                     isPassword && obscurePassword ? '•'*value.length : value,
                     style: TextStyle(
                       fontSize: 16,
-                      fontFamily: isPassword ? 'monospace' : null,
+                      fontFamily: (isPassword || useMonospace) ? 'monospace' : null,
                     ),
                     maxLines: 1,
                   ),
@@ -187,6 +186,7 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
   }
 
   Widget buildFront() {
+    final createdAt = item['createdAt'] ?? '';
     final updatedAt = item['updatedAt'] ?? item['createdAt'] ?? '';
 
     return Container(
@@ -231,20 +231,25 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
           const Divider(),
           buildRow('Username', item['username'] ?? ''),
           buildRow('Password', item['password'] ?? '', isPassword: true),
-          buildRow('URL / Domain', item['domain'] ?? ''),
+          buildRow('URL/Domain', item['domain'] ?? ''),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text('Updated: ${formatDateString(updatedAt)}', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
-              ),
-              IconButton(
-                icon: const Icon(Icons.flip_camera_android),
-                color: Theme.of(context).colorScheme.secondary,
-                onPressed: flipCard,
-                tooltip: 'Flip to Notes',
+              if ((item['id'] ?? '').isNotEmpty)
+                Text('Credential Id: ${item['id']}', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+              if (createdAt.isNotEmpty)
+                Text('Created: ${formatDateString(createdAt)}', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+              if (updatedAt.isNotEmpty)
+                Text('Updated: ${formatDateString(updatedAt)}', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: const Icon(Icons.flip_camera_android),
+                  color: Theme.of(context).colorScheme.secondary,
+                  onPressed: flipCard,
+                  tooltip: 'Flip to Notes',
+                ),
               ),
             ],
           ),

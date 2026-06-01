@@ -136,6 +136,7 @@ class SettingsScreenState extends State<SettingsScreen> {
         return;
       }
 
+      await Future.delayed(const Duration(milliseconds: 250));
       final importPassword = await askImportPassword();
       if (!mounted || importPassword == null) {
         if (!mounted) return;

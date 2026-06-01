@@ -13,19 +13,19 @@ class BiometricService {
       final code = error.code.toLowerCase();
       switch (code) {
         case 'notavailable':
-          return 'Biometric authentication is not available on this device';
+          return 'Biometric is not available on device';
         case 'notsetup':
-          return 'No biometric data (fingerprint/face) is enrolled on this device. Please set up biometrics in your device settings.';
+          return 'No biometric is enrolled on device';
         case 'nodevicecredential':
-          return 'Device lock (PIN, pattern, or password) is required to use biometric authentication. Please set up a device lock first.';
+          return 'Please set up a device lock';
         case 'nocredential':
-          return 'No device credentials are set. Please set up a device lock first.';
+          return 'Please set up a device lock';
         case 'permanentlylockedout':
-          return 'Too many failed biometric attempts. Please try again later.';
+          return 'Too many failed biometric attempts';
         case 'lockedout':
-          return 'Biometric is temporarily locked. Please try again later.';
+          return 'Biometric is temporarily locked';
         case 'notavailable_or_notsetup':
-          return 'Biometric data is not set up on this device';
+          return 'Biometric is not set up on device';
         default:
           return error.message ?? 'Biometric authentication failed';
       }

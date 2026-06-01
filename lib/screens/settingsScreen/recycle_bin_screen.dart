@@ -135,7 +135,7 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
     if (deleted) {
       await loadRecycleBin();
       if (!mounted) return;
-      AppSnackBars.showCustomSnackBar(context: context, message: 'Item permanently deleted from this device', textColor: Colors.red);
+      AppSnackBars.showCustomSnackBar(context: context, message: 'Account permanently deleted', textColor: Colors.red);
     }
   }
 

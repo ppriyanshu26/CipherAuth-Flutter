@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../utils/services/storage_service.dart';
 import '../../utils/crypto/runtime_key.dart';
 import '../../utils/services/biometric_service.dart';
+import '../../widgets/passphrase_generator_dialog.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -31,6 +32,11 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
       return;
     }
 
+    if (newPasswordController.text.length < 12) {
+      setState(() => error = 'Minimum 12 characters');
+      return;
+    }
+
     if (confirmPasswordController.text.isEmpty) {
       setState(() => error = 'Please confirm new password');
       return;
@@ -47,6 +53,21 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
       );
       return;
     }
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Warning'),
+        content: const Text('I agree that I have copied my password and saved it. If I forget it beyond this point, I can never reset it and recover my data.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('I Agree')),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     setState(() => isLoading = true);
 
     try {
@@ -88,7 +109,23 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Your Password'), scrolledUnderElevation: 0),
+      appBar: AppBar(title: const Text('Reset Your Password'), scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.lock_reset),
+            tooltip: 'Passphrase Generator',
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return const PassphraseGeneratorDialog();
+                },
+              );
+            },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(

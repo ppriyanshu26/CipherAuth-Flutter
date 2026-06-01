@@ -269,6 +269,7 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
     }
 
     if (!mounted) return;
+    AppSnackBars.showCustomSnackBar(context: context, message: 'Account added successfully', textColor: Colors.greenAccent.shade700);
     Navigator.pop(context, true);
   }
 

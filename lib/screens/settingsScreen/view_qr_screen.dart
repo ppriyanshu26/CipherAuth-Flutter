@@ -80,7 +80,7 @@ class ViewQrScreenState extends State<ViewQrScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('This app is developed keeping privacy in mind, be sure with who you share the QR codes, it is advisable to use the sync feature to securely sync with your devices',
+              const Text('CipherAuth is developed keeping privacy in mind, be sure with who you share the QR codes.\nIt is advisable to use the sync feature to securely sync with your devices.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.orange),
               ),
