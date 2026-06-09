@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/crypto/password_store.dart';
+import '../../widgets/passphrase_generator_dialog.dart';
 
 class AddPasswordScreen extends StatefulWidget {
   final Map<String, String>? existingPassword;
@@ -40,18 +41,32 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
       setState(() => isDomainValid = false);
       return;
     }
-    final parts = text.split(RegExp(r'[,\n\s]+'));
+    final parts = text.split(RegExp(r'[,\n\s]+')).where((p) => p.trim().isNotEmpty).toList();
+    if (parts.length > 1) {
+      setState(() => isDomainValid = false);
+      return;
+    }
     bool allValid = true;
     for (var p in parts) {
       final pt = p.trim();
       if (pt.isEmpty) continue;
-      final urlRegex = RegExp(r'^(https?:\/\/)?([\w\-]+(\.[\w\-]+)+)([\w\-\.,@?^=%&:/~\+#]*[\w\-\@?^=%&/~\+#])?$');
+      final urlRegex = RegExp(r'^(?:https?://)?(?:www\.)?(?:localhost|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|(?:(?!www\.)[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(?::\d+)?(?:\/[^\s]*)?$', caseSensitive: false);
       if (!urlRegex.hasMatch(pt)) {
         allValid = false;
         break;
       }
     }
     setState(() => isDomainValid = allValid && parts.isNotEmpty);
+  }
+
+  String? getDomainErrorText() {
+    final text = domainCtrl.text.trim();
+    if (text.isEmpty) return null;
+    final parts = text.split(RegExp(r'[,\n\s]+')).where((p) => p.trim().isNotEmpty).toList();
+    if (parts.length > 1) {
+      return 'Only one domain is allowed';
+    }
+    return 'Contains invalid domain format';
   }
 
   String normalizeDomainInput(String input) {
@@ -132,7 +147,7 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
       return;
     }
     if (!isDomainValid) {
-      setState(() => error = 'Please enter valid a URL');
+      setState(() => error = getDomainErrorText() ?? 'Please enter valid a URL');
       return;
     }
 
@@ -243,7 +258,23 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(isEditing ? 'Edit Password' : 'Add Password'), scrolledUnderElevation: 0),
+      appBar: AppBar(title: Text(isEditing ? 'Edit Password' : 'Add Password'), scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.lock_reset),
+            tooltip: 'Passphrase Generator',
+            onPressed: () {
+              FocusScope.of(context).unfocus();
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return const PassphraseGeneratorDialog();
+                },
+              );
+            },
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -264,7 +295,7 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
               obscureText: obscurePassword,
               decoration: InputDecoration(labelText: 'Password', border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
-                  icon: Icon(obscurePassword ? Icons.visibility : Icons.visibility_off),
+                  icon: Icon(obscurePassword ? Icons.visibility_off : Icons.visibility),
                   tooltip: obscurePassword ? 'Show Password' : 'Hide Password',
                   onPressed: () => setState(() => obscurePassword = !obscurePassword),
                 ),
@@ -273,10 +304,8 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: domainCtrl,
-              maxLines: null,
-              keyboardType: TextInputType.multiline,
               decoration: InputDecoration(labelText: 'Site URL', border: const OutlineInputBorder(),
-                errorText: domainCtrl.text.isNotEmpty && !isDomainValid ? 'Contains invalid domain format' : null,
+                errorText: domainCtrl.text.isNotEmpty && !isDomainValid ? getDomainErrorText() : null,
               ),
             ),
             const SizedBox(height: 12),

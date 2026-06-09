@@ -169,6 +169,13 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
       appBar: AppBar(title: const Text('Password Manager'), scrolledUnderElevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.info),
+            tooltip: 'Info',
+            onPressed: () {
+              AppSnackBars.showCustomSnackBar(context: context, message: 'Tap to copy - Long press for details ', textColor: Colors.blue);
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.lock_reset),
             tooltip: 'Passphrase Generator',
             onPressed: () {

@@ -169,9 +169,9 @@ class PassphraseGeneratorDialogState extends State<PassphraseGeneratorDialog> {
                       Expanded(
                         child: Slider(
                           value: wordCount.toDouble(),
-                          min: 3,
+                          min: 4,
                           max: 8,
-                          divisions: 5,
+                          divisions: 4,
                           label: wordCount.toString(),
                           onChanged: (value) {
                             setState(() {

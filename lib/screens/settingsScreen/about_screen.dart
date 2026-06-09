@@ -60,7 +60,7 @@ class AboutScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text('CipherAuth is a secure local-first authenticator that helps you store and manage your 2FA credentials securely solely on your device.',
+                  const Text('CipherAuth is a secure local-first password manager that helps you store and manage your passwords and MFA codes securely completely on your device.',
                     style: TextStyle(fontSize: 16, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
@@ -208,7 +208,7 @@ class AboutScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             child: Center(
-              child: Text('© 2026 Priyanshu Priyam\nThis app is source-available on GitHub.\nFor licensing and contribution inquiries, please contact the developer.',
+              child: Text('© 2026 Priyanshu Priyam\nThis app is source-available on GitHub.\nFor suggestions and contribution inquiries, please contact me.',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),

@@ -1,4 +1,6 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../utils/services/storage_service.dart';
 import '../utils/crypto/runtime_key.dart';
 import '../utils/services/biometric_service.dart';
@@ -105,6 +107,14 @@ class LoginScreenState extends State<LoginScreen> {
 
       if (password != null) {
         RuntimeKey.rawPassword = password;
+        if (Platform.isAndroid) {
+          try {
+            await const MethodChannel('cipherauth/autofill').invokeMethod(
+              'enableBiometricAutofill',
+              {'password': password},
+            );
+          } catch (_) {}
+        }
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => MainScreen(onToggleTheme: widget.onToggleTheme),
@@ -132,7 +142,16 @@ class LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    RuntimeKey.rawPassword = controller.text;
+    final password = controller.text;
+    RuntimeKey.rawPassword = password;
+    if (Platform.isAndroid && await BiometricService.isBiometricEnabled()) {
+      try {
+        await const MethodChannel('cipherauth/autofill').invokeMethod(
+          'enableBiometricAutofill',
+          {'password': password},
+        );
+      } catch (_) {}
+    }
     if (!mounted) return;
     navigator.pushReplacement(
       MaterialPageRoute(
@@ -194,7 +213,7 @@ class LoginScreenState extends State<LoginScreen> {
                       labelText: 'Master Password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                        icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
                         tooltip: obscure ? 'Show Password' : 'Hide Password',
                         onPressed: () => setState(() => obscure = !obscure),
                       ),

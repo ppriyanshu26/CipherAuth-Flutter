@@ -191,7 +191,7 @@ class SyncScreenState extends State<SyncScreen> {
                 Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text('Sync is now compatible only with CipherAuth version 8 or later.\nDevices must be on the same Wi-Fi network.\nPlease disable any VPNs or services that change your IP address.',
+                  child: Text('Sync is now compatible only with CipherAuth version 8 or later.\nDevices must be on the same Wi-Fi band.\nPlease disable any VPNs or services that change your IP address.',
                     style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ),

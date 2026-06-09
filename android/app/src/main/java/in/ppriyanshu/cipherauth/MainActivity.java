@@ -11,16 +11,76 @@ import androidx.annotation.NonNull;
 import io.flutter.embedding.android.FlutterFragmentActivity;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.MethodChannel;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.provider.Settings;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends FlutterFragmentActivity {
     private static final String FLAVOR_CHANNEL = "cipherauth/flavor";
     private static final String STORAGE_CHANNEL = "cipherauth/storage";
+    private static final String AUTOFILL_CHANNEL = "cipherauth/autofill";
 
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
+
+        new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), AUTOFILL_CHANNEL)
+            .setMethodCallHandler((call, result) -> {
+                switch (call.method) {
+                    case "isAutofillEnabled": {
+                        boolean enabled = false;
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            String setting = Settings.Secure.getString(getContentResolver(), "autofill_service");
+                            if (setting != null) {
+                                enabled = setting.contains(getPackageName() + "/in.ppriyanshu.cipherauth.AutofillService");
+                            }
+                        }
+                        result.success(enabled);
+                        break;
+                    }
+                    case "openAutofillSettings": {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            Intent intent = new Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE);
+                            intent.setData(Uri.parse("package:" + getPackageName()));
+                            try {
+                                startActivity(intent);
+                                result.success(true);
+                            } catch (Exception e) {
+                                try {
+                                    startActivity(new Intent(Settings.ACTION_SETTINGS));
+                                    result.success(true);
+                                } catch (Exception ex) {
+                                    result.error("FAILED", "Could not open autofill settings", ex.getMessage());
+                                }
+                            }
+                        } else {
+                            result.error("NOT_SUPPORTED", "Autofill not supported on this device", null);
+                        }
+                        break;
+                    }
+                    case "enableBiometricAutofill": {
+                        String password = call.argument("password");
+                        if (password != null) {
+                            AutofillKeyStoreHelper.INSTANCE.encryptAndSaveMasterPassword(this, password);
+                            result.success(true);
+                        } else {
+                            result.error("INVALID_ARGUMENTS", "Password was null", null);
+                        }
+                        break;
+                    }
+                    case "disableBiometricAutofill": {
+                        AutofillKeyStoreHelper.INSTANCE.disableBiometric(this);
+                        result.success(true);
+                        break;
+                    }
+                    default:
+                        result.notImplemented();
+                        break;
+                }
+            });
 
         new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), FLAVOR_CHANNEL)
             .setMethodCallHandler((call, result) -> {

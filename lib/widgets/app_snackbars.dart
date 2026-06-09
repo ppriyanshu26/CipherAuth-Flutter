@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppSnackBars {
   static ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showCustomSnackBar({required BuildContext context, required String message, required Color textColor, String? actionLabel, VoidCallback? onActionPressed,}) {
     ScaffoldMessenger.of(context).clearSnackBars();
-    final calculatedDuration = actionLabel != null ? const Duration(seconds: 3) : const Duration(seconds: 2);
+    final calculatedDuration = const Duration(seconds: 2);
 
     return ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

@@ -101,6 +101,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> with SingleT
 
     if (confirm != true) return;
 
+    if (!mounted) return;
     final navigator = Navigator.of(context);
     await Storage.saveMasterPassword(p1);
     if (!mounted) return;
@@ -214,7 +215,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> with SingleT
                       labelText: 'Master Password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(obscure1 ? Icons.visibility : Icons.visibility_off),
+                        icon: Icon(obscure1 ? Icons.visibility_off : Icons.visibility),
                         tooltip: obscure1 ? 'Show Password' : 'Hide Password',
                         onPressed: () => setState(() => obscure1 = !obscure1),
                       ),
@@ -230,7 +231,7 @@ class CreatePasswordScreenState extends State<CreatePasswordScreen> with SingleT
                       labelText: 'Confirm Password',
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(obscure2 ? Icons.visibility : Icons.visibility_off),
+                        icon: Icon(obscure2 ? Icons.visibility_off : Icons.visibility),
                         tooltip: obscure2 ? 'Show Password' : 'Hide Password',
                         onPressed: () => setState(() => obscure2 = !obscure2),
                       ),

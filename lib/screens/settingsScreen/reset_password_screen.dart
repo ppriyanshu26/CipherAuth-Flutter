@@ -139,7 +139,8 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   labelText: 'Current Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(obscureOld ? Icons.visibility : Icons.visibility_off),
+                    icon: Icon(obscureOld ? Icons.visibility_off : Icons.visibility),
+                    tooltip: obscureOld ? 'Show Password' : 'Hide Password',
                     onPressed: () => setState(() => obscureOld = !obscureOld),
                   ),
                 ),
@@ -153,7 +154,8 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   labelText: 'New Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(obscureNew ? Icons.visibility : Icons.visibility_off),
+                    icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility),
+                    tooltip: obscureNew ? 'Show Password' : 'Hide Password',
                     onPressed: () => setState(() => obscureNew = !obscureNew),
                   ),
                 ),
@@ -167,7 +169,8 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   labelText: 'Confirm New Password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(obscureConfirm ? Icons.visibility : Icons.visibility_off),
+                    icon: Icon(obscureConfirm ? Icons.visibility_off : Icons.visibility),
+                    tooltip: obscureConfirm ? 'Show Password' : 'Hide Password',
                     onPressed: () =>
                         setState(() => obscureConfirm = !obscureConfirm),
                   ),

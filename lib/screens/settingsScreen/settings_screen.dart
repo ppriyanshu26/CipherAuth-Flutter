@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../utils/services/storage_service.dart';
 import '../../utils/services/export_service.dart';
@@ -27,12 +28,14 @@ class SettingsScreenState extends State<SettingsScreen> {
   bool isDarkMode = false;
   bool canUseBiometric = false;
   bool isBiometricEnabled = false;
+  bool isAutofillServiceSelected = false;
 
   @override
   void initState() {
     super.initState();
     loadTheme();
     loadBiometricStatus();
+    loadAutofillStatus();
   }
 
   Future<void> loadTheme() async {
@@ -51,6 +54,19 @@ class SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  Future<void> loadAutofillStatus() async {
+    if (!Platform.isAndroid) return;
+    try {
+      const channel = MethodChannel('cipherauth/autofill');
+      final selected =
+          await channel.invokeMethod<bool>('isAutofillEnabled') ?? false;
+      if (!mounted) return;
+      setState(() {
+        isAutofillServiceSelected = selected;
+      });
+    } catch (_) {}
+  }
+
   Future<void> toggleBiometric(bool value) async {
     if (value) {
       if (RuntimeKey.rawPassword != null) {
@@ -60,6 +76,15 @@ class SettingsScreenState extends State<SettingsScreen> {
         if (!mounted) return;
         if (success) {
           setState(() => isBiometricEnabled = true);
+          if (Platform.isAndroid) {
+            try {
+              await const MethodChannel('cipherauth/autofill').invokeMethod(
+                'enableBiometricAutofill',
+                {'password': RuntimeKey.rawPassword!},
+              );
+            } catch (_) {}
+          }
+          if (!mounted) return;
           AppSnackBars.showCustomSnackBar(context: context, message: 'Biometric unlock enabled', textColor: Colors.blue);
         } else {
           setState(() => isBiometricEnabled = false);
@@ -70,6 +95,13 @@ class SettingsScreenState extends State<SettingsScreen> {
       try {
         await BiometricService.disableBiometric();
         setState(() => isBiometricEnabled = false);
+        if (Platform.isAndroid) {
+          try {
+            await const MethodChannel(
+              'cipherauth/autofill',
+            ).invokeMethod('disableBiometricAutofill');
+          } catch (_) {}
+        }
         if (!mounted) return;
         AppSnackBars.showCustomSnackBar(context: context, message: 'Biometric unlock disabled', textColor: Colors.blue);
       } catch (e) {
@@ -298,6 +330,24 @@ class SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
+                if (Platform.isAndroid) ...[
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.vpn_key),
+                      title: const Text('Android Autofill'),
+                      subtitle: Text(isAutofillServiceSelected ? 'CipherAuth is your default provider' : 'Select CipherAuth as default provider'),
+                      trailing: isAutofillServiceSelected ? const Icon(Icons.check_circle, color: Colors.green) : const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () async {
+                        if (isAutofillServiceSelected) {
+                          AppSnackBars.showCustomSnackBar(context: context, message: 'Open phone settings to change autofill', textColor: Colors.blue);
+                        } else {
+                          const channel = MethodChannel('cipherauth/autofill');
+                          await channel.invokeMethod('openAutofillSettings');
+                        }
+                      },
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
