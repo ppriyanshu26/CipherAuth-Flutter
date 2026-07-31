@@ -110,6 +110,7 @@ class PasswordStore {
       'username': (e['username'] ?? '').toString(),
       'password': (e['password'] ?? '').toString(),
       'notes': (e['notes'] ?? '').toString(),
+      'linkedTotpId': (e['linkedTotpId'] ?? '').toString(),
       'createdAt': (e['createdAt'] ?? '').toString(),
       'updatedAt': (e['updatedAt'] ?? '').toString(),
     };
@@ -261,6 +262,7 @@ class PasswordStore {
           'username': (e['username'] ?? '').toString(),
           'password': (e['password'] ?? '').toString(),
           'notes': (e['notes'] ?? '').toString(),
+          'linkedTotpId': (e['linkedTotpId'] ?? '').toString(),
           'createdAt': (e['createdAt'] ?? '').toString(),
           'updatedAt': (e['updatedAt'] ?? '').toString(),
           'deletedAt': deletedAt.toString(),
@@ -329,7 +331,7 @@ class PasswordStore {
     await saveRecyclleBin(finalRecycleBin);
   }
 
-  static Future<String?> add( String name, String domain, String username, String password, String notes) async {
+  static Future<String?> add( String name, String domain, String username, String password, String notes, {String linkedTotpId = ''}) async {
     final list = await load();
     final createdAtMillis = getCurrentTimestampMillis();
     final id = generateId(createdAtMillis);
@@ -341,6 +343,7 @@ class PasswordStore {
       'username': username,
       'password': password,
       'notes': notes,
+      'linkedTotpId': linkedTotpId,
       'createdAt': now,
       'updatedAt': now,
     });
@@ -350,7 +353,7 @@ class PasswordStore {
     return id;
   }
 
-  static Future<String?> update( String oldId, String name, String domain, String username, String password, String notes) async {
+  static Future<String?> update( String oldId, String name, String domain, String username, String password, String notes, {String linkedTotpId = ''}) async {
     final list = await load();
     final index = list.indexWhere((e) => e['id'] == oldId);
     if (index == -1) return null;
@@ -365,6 +368,7 @@ class PasswordStore {
       'username': username,
       'password': password,
       'notes': notes,
+      'linkedTotpId': linkedTotpId,
       'createdAt': item['createdAt'] ?? getFormattedTimestamp(),
       'updatedAt': now,
     };
@@ -426,5 +430,38 @@ class PasswordStore {
       await saveAll(filtered);
     }
     return true;
+  }
+
+  static Future<void> unlinkTotpIds(List<String> totpIds) async {
+    if (totpIds.isEmpty) return;
+    final totpIdSet = totpIds.toSet();
+
+    final passwords = await load();
+    var activeChanged = false;
+    for (var i = 0; i < passwords.length; i++) {
+      final linkedId = passwords[i]['linkedTotpId'] ?? '';
+      if (linkedId.isNotEmpty && totpIdSet.contains(linkedId)) {
+        passwords[i]['linkedTotpId'] = '';
+        passwords[i]['updatedAt'] = getFormattedTimestamp();
+        activeChanged = true;
+      }
+    }
+    if (activeChanged) {
+      await saveAll(passwords);
+    }
+
+    final binPasswords = await getRecycleBin(purgeExpired: false);
+    var binChanged = false;
+    for (var i = 0; i < binPasswords.length; i++) {
+      final linkedId = binPasswords[i]['linkedTotpId'] ?? '';
+      if (linkedId.isNotEmpty && totpIdSet.contains(linkedId)) {
+        binPasswords[i]['linkedTotpId'] = '';
+        binPasswords[i]['updatedAt'] = getFormattedTimestamp();
+        binChanged = true;
+      }
+    }
+    if (binChanged) {
+      await saveRecyclleBin(binPasswords);
+    }
   }
 }

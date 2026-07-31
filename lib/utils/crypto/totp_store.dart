@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
 import 'crypto.dart';
+import 'password_store.dart';
 
 class TotpStore {
   static const storeKey = 'totp_store';
@@ -310,6 +311,7 @@ class TotpStore {
         .where((item) => !idSet.contains(item['id']))
         .toList();
     await saveAll(remaining);
+    await PasswordStore.unlinkTotpIds(ids);
   }
 
   static Future<bool> deletePermanentlyFromRecycleBin(String id) async {
@@ -321,6 +323,7 @@ class TotpStore {
     if (filtered.length != active.length) {
       await saveActiveCreds(filtered);
     }
+    await PasswordStore.unlinkTotpIds([id]);
     return true;
   }
 
@@ -597,5 +600,13 @@ class TotpStore {
     await saveActiveCreds(filteredItems);
     await saveDeletionLog(mergedDeletionLog);
     await saveRecycleBin(mergedRecycleBin);
+    final allDeletedIds = {
+      ...mergedDeletionLog.keys,
+      for (final entry in mergedRecycleBin)
+        if ((entry['id'] ?? '').isNotEmpty) entry['id']!,
+    }.toList();
+    if (allDeletedIds.isNotEmpty) {
+      await PasswordStore.unlinkTotpIds(allDeletedIds);
+    }
   }
 }

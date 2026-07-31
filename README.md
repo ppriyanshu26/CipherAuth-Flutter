@@ -4,7 +4,7 @@
 ![Offline First](https://img.shields.io/badge/Offline-First-546E7A)
 ![Platform Android](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)
 ![Platform Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows11&logoColor=white)
-![Encryption AES-256-GCM](https://img.shields.io/badge/Encryption-AES--256--GCM-2E7D32)
+![Encryption AES-GCM](https://img.shields.io/badge/Encryption-AES--256--GCM-2E7D32)
 ![Biometric Unlock](https://img.shields.io/badge/Unlock-Biometric-0A66C2)
 ![QR Code Support](https://img.shields.io/badge/QR%20Code-Supported-FF9800)
 ![Local Sync](https://img.shields.io/badge/Sync-Local%20Network-6A1B9A)
@@ -43,11 +43,12 @@ You can also download standalone installation binaries directly from the [Releas
 
 - **Dual Vault (TOTP & Password Manager):** Manage 2FA authenticator tokens and passwords under dedicated tabs.
 - **Offline-First Privacy:** Fully sandboxed offline execution. No user accounts, registration, analytics SDKs, or cloud backends.
-- **AES-256-GCM Encryption:** Vault databases are encrypted using AES-256-GCM with keys derived from your Master Password via SHA-256.
+- **AES-GCM Encryption:** Vault databases are encrypted using AES-GCM with keys derived from your Master Password via SHA-256.
 - **Autofill:** Securely enter your login details on apps and websites without the effort of copy-pasting your credentials. 
 - **Secure Local Sync:** Bidirectional local network sync (LAN) using a secure custom handshake protocol. Data is kept encrypted end-to-end and only decrypted if both devices have matching master passwords.
 - **Biometric Authentication:** Support for Android Biometrics and Windows Hello (Fingerprint, Face unlock, or PIN code verification).
-- **Auto-Lock Security:** Wipes the master password from runtime memory (`RuntimeKey`) and locks the application interface when paused or backgrounded.
+- **Encrypted `csv`:** To safeguard from accidental uninstalls, all your data can be exported to a csv file, `encrypted with your password`.
+- **Auto-Lock Security:** Wipes the master password from runtime memory (`RuntimeKey`) and locks the application interface when paused or backgrounded (Android only).
 - **Passphrase Generator:** Create strong, human-readable passphrases (e.g., `correct-bell-pepper-salt`) using a built-in customizable wordlist generator.
 - **Screenshot Protection:** Automatic screenshot blocking and background task-switcher cover/masking on Android devices.
 - **Recycle Bin:** Safeguards deleted records, retaining them for 30 days before purging. Supports instant permanent deletion.
@@ -127,7 +128,13 @@ For detailed windows release instructions, see the [Flutter documentation](https
 <details>
 <summary><strong>How secure is CipherAuth?</strong></summary>
 
-CipherAuth uses military-grade AES-GCM encryption to protect your credentials and maintain integrity.
+CipherAuth uses military-grade AESGCM encryption to protect your credentials and maintain integrity. Every bit of information is stored as ciphertext in the device storage and the OS KeyStore, and only decrypted in runtime memory.
+</details>
+
+<details>
+<summary><strong>What is MFA or 2FA?</strong></summary>
+
+Multi or 2 Factor Authentication adds a second layer to the safety of your accounts, asking for a configured service and a login success with password. This ensures that it is the rightful owner accessing his account. Traditionally SMS and Email OTPs are used, but they pose an eavesropping risk. TOTP based authenticators remove this factor as the code is refreshed twice a minute, and is always locally available in your device.
 </details>
 
 <details>
@@ -137,9 +144,15 @@ Passphrases are sequences of random words (e.g., "correct-bell-pepper-salt") ins
 </details>
 
 <details>
-<summary><strong>How does autofill work?</strong></summary>
+<summary><strong>What is autofill?</strong></summary>
 
 Copying passwords and pasting them poses a risk, clipboard is an open book for all the apps to read and write to. To make you secure from password thefts, CipherAuth integrates with the operating system itself, which tells the app the url of the website, and CipherAuth securely fills the credentials directly in the input fields. For browsers, change their settings to allow 3rd party apps to autofill.
+</details>
+
+<details>
+<summary><strong>How does autofill work?</strong></summary>
+
+You are asked for a URL while creating a password. This plus the username is a unique identifier of the password. During autofill, the OS hands over the url of the browser to CipherAuth and the only the filtered credentials are returned.
 </details>
 
 <details>
@@ -149,9 +162,21 @@ Since CipherAuth doesn't have a cloud server, syncing manually between every dev
 </details>
 
 <details>
-<summary><strong>Is a backup csv file safe?</strong></summary>
+<summary><strong>Are devices with different versions compatible with other?</strong></summary>
 
-Yes, even the csv files are encrypted and can only be decrypted by the same password it was used to encrypt. Your digital identity is completely secure and truly in your hands.
+The core concept of the app is privacy and it is still ever since the app was made. However with newer versions, it gets better and convenient. It is advisable to keep your app updated. Although backward and forward compatibility is implemented wherever it could be, some features in sync and import could break since both apps have different versions. Please keep your backup csv files at all times.
+</details>
+
+<details>
+<summary><strong>Is exporting a csv file safe?</strong></summary>
+
+Yes, even the csv files are encrypted and can only be decrypted by the same password it was used to encrypt. Your digital identity is completely secure and truly in your hands. It is saved in your Downloads directory. However, still it is a better approach to safeguard this file.
+</details>
+
+<details>
+<summary><strong>How does the import work?</strong></summary>
+
+Importing a file works only if it has not been tampered with and you know the password which which it was encrypted. It scans the file data and current vault and prompts the user of new accounts that are found and ready to be added.
 </details>
 
 <details>

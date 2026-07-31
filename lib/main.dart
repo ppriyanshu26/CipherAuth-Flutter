@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
+import 'package:flutter/services.dart';
 import 'package:app_links/app_links.dart';
 import 'screens/startup_screen.dart';
 import 'screens/authenticatorScreen/add_account_screen.dart';
+import 'screens/passwordScreen/add_password_screen.dart';
 import 'utils/services/storage_service.dart';
 import 'utils/ui/app_lifecycle_manager.dart';
 import 'utils/ui/app_flavor.dart';
@@ -11,6 +13,16 @@ import 'package:window_manager/window_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarContrastEnforced: false,
+    ),
+  );
+
   await AppFlavorConfig.initialize();
 
   if (Platform.isWindows) {
@@ -41,12 +53,15 @@ class MyAppState extends State<MyApp> {
   ThemeMode themeMode = ThemeMode.light;
   final navigatorKey = GlobalKey<NavigatorState>();
   String? pendingDeepLink;
+  String? pendingPrefillUrl;
+  static const autofillChannel = MethodChannel('cipherauth/autofill');
   @override
   void initState() {
     super.initState();
     loadTheme();
     setupLifecycleCallbacks();
     setupDeepLinkListener();
+    setupAutofillPrefillListener();
   }
 
   Future<void> loadTheme() async {
@@ -86,6 +101,22 @@ class MyAppState extends State<MyApp> {
     }, onError: (err) {});
   }
 
+  void setupAutofillPrefillListener() {
+    autofillChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onAddPasswordPrefill') {
+        final String? url = call.arguments as String?;
+        if (url != null && url.isNotEmpty) {
+          handlePrefillUrl(url);
+        }
+      }
+    });
+    autofillChannel.invokeMethod<String>('getPrefillUrl').then((url) {
+      if (url != null && url.isNotEmpty) {
+        handlePrefillUrl(url);
+      }
+    }).catchError((_) {});
+  }
+
   void handleDeepLink(Uri uri) {
     if (uri.scheme == 'otpauth' && uri.host == 'totp') {
       final otpauthUrl = uri.toString();
@@ -106,6 +137,22 @@ class MyAppState extends State<MyApp> {
     }
   }
 
+  void handlePrefillUrl(String url) {
+    if (RuntimeKey.rawPassword != null) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => AddPasswordScreen(initialUrl: url),
+        ),
+      );
+    } else {
+      pendingPrefillUrl = url;
+      navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        '/startup',
+        (route) => false,
+      );
+    }
+  }
+
   void handleAppResumed() {
     navigatorKey.currentState?.pushNamedAndRemoveUntil(
       '/startup',
@@ -123,6 +170,12 @@ class MyAppState extends State<MyApp> {
     final link = pendingDeepLink;
     pendingDeepLink = null;
     return link;
+  }
+
+  String? takePendingPrefillUrl() {
+    final url = pendingPrefillUrl;
+    pendingPrefillUrl = null;
+    return url;
   }
 
   @override

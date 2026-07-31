@@ -1,9 +1,12 @@
 import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'add_password_screen.dart';
 import '../../utils/crypto/password_store.dart';
+import '../../utils/crypto/totp_store.dart';
+import '../../utils/crypto/totp.dart';
 import '../../widgets/app_snackbars.dart';
 
 class MouseWheelHorizontalScroll extends StatefulWidget {
@@ -66,6 +69,9 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
   late Map<String, String> item;
   bool obscurePassword = true;
   final ScrollController notesScrollController = ScrollController();
+  Map<String, String>? linkedTotpItem;
+  Timer? totpTimer;
+  int nowEpoch = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
   @override
   void initState() {
@@ -75,12 +81,51 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    loadLinkedTotp();
+  }
+
+  void loadLinkedTotp() async {
+    final linkedId = item['linkedTotpId'] ?? '';
+    if (linkedId.isNotEmpty) {
+      final totps = await TotpStore.load();
+      final matched = totps.firstWhere((t) => t['id'] == linkedId, orElse: () => {});
+      if (matched.isNotEmpty) {
+        if (!mounted) return;
+        setState(() {
+          linkedTotpItem = matched;
+        });
+        startTotpTimer();
+      }
+    }
+  }
+
+  void startTotpTimer() {
+    totpTimer?.cancel();
+    totpTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          nowEpoch = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        });
+      }
+    });
+  }
+
+  Color changeColor(int remaining, int period) {
+    final percentage = (remaining/period)*100;
+    if (percentage > 67) {
+      return Colors.green;
+    } else if (percentage > 34) {
+      return Colors.yellow;
+    } else {
+      return Colors.red;
+    }
   }
 
   @override
   void dispose() {
     controller.dispose();
     notesScrollController.dispose();
+    totpTimer?.cancel();
     super.dispose();
   }
 
@@ -231,7 +276,61 @@ class PasswordFlipCardState extends State<PasswordFlipCard> with SingleTickerPro
           const Divider(),
           buildRow('Username', item['username'] ?? ''),
           buildRow('Password', item['password'] ?? '', isPassword: true),
-          buildRow('URL/Domain', item['domain'] ?? ''),
+          buildRow('URL', item['domain'] ?? ''),
+          if (linkedTotpItem != null) ...[
+            Builder(
+              builder: (context) {
+                final secret = linkedTotpItem!['secretcode']!;
+                final code = Totp.generate(secret: secret, digits: 6, period: 30, time: nowEpoch);
+                final remaining = 30 - (nowEpoch % 30);
+                final color = changeColor(remaining, 30);
+                final platform = linkedTotpItem!['platform'] ?? '';
+                final username = linkedTotpItem!['username'] ?? '';
+                final displayLabel = username.isNotEmpty ? '$platform ($username)' : platform;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayLabel.isNotEmpty ? 'Authenticator ($displayLabel)' : 'Authenticator',
+                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: MouseWheelHorizontalScroll(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SelectableText(
+                                    code,
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color, letterSpacing: 1.0, fontFamily: 'monospace'),
+                                    maxLines: 1,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('($remaining s)', style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.copy, size: 20),
+                            onPressed: () => copyToClipboard(code, 'Code'),
+                            tooltip: 'Copy OTP',
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
           const SizedBox(height: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

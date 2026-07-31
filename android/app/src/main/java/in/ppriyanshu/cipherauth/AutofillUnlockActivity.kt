@@ -273,6 +273,47 @@ class AutofillUnlockActivity : FragmentActivity() {
                 // 
             }
         }
+        val addPasswordDatasetBuilder = Dataset.Builder()
+        val addPasswordPresentation = RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
+            setTextViewText(android.R.id.text1, "Add Password")
+        }
+
+        val addPasswordIntent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val prefill = if (targetDomain.isNotEmpty()) {
+                targetDomain
+            } else {
+                targetPackage.split('.').reversed().joinToString(".")
+            }
+            putExtra("autofill_add_password_url", prefill)
+        }
+        val piFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+
+        val addPasswordPendingIntent = PendingIntent.getActivity(
+            this,
+            1003,
+            addPasswordIntent,
+            piFlag
+        )
+
+        if (usernameId != null) {
+            addPasswordDatasetBuilder.setValue(usernameId!!, null, addPasswordPresentation)
+        }
+        if (passwordId != null) {
+            addPasswordDatasetBuilder.setValue(passwordId!!, null, addPasswordPresentation)
+        }
+
+        addPasswordDatasetBuilder.setAuthentication(addPasswordPendingIntent.intentSender)
+
+        try {
+            responseBuilder.addDataset(addPasswordDatasetBuilder.build())
+        } catch (e: Exception) {
+            //
+        }
 
         val openAppDatasetBuilder = Dataset.Builder()
         val openAppPresentation = RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
@@ -286,7 +327,7 @@ class AutofillUnlockActivity : FragmentActivity() {
             this,
             1002,
             openAppIntent,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else 0
+            piFlag
         )
 
         if (usernameId != null) {

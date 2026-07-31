@@ -34,7 +34,7 @@ class ExportService {
         return (false, 'No credentials to export');
       }
       final csvRows = <List<String>>[];
-      csvRows.add(['Type', 'ID', 'Title/Platform', 'Username', 'Secret/Password', 'URL/Domain', 'Notes', 'Created At', 'Updated At', ' TOTP URL']);
+      csvRows.add(['Type', 'ID', 'Title/Platform', 'Username', 'Secret/Password', 'URL/Domain', 'Notes', 'Created At', 'Updated At', ' TOTP URL', 'Linked TOTP ID']);
       for (final cred in totpCredentials) {
         csvRows.add([
           'totp',
@@ -47,6 +47,7 @@ class ExportService {
           cred['createdAt'] ?? '',
           '',
           'otpauth://totp/${cred['platform']}:${cred['username']}?secret=${cred['secretcode']}',
+          '',
         ]);
       }
       for (final pass in passwordCredentials) {
@@ -61,6 +62,7 @@ class ExportService {
           pass['createdAt'] ?? '',
           pass['updatedAt'] ?? '',
           '',
+          pass['linkedTotpId'] ?? '',
         ]);
       }
 

@@ -1,10 +1,88 @@
 import 'package:flutter/material.dart';
 import '../../utils/crypto/password_store.dart';
+import '../../utils/crypto/totp_store.dart';
 import '../../widgets/passphrase_generator_dialog.dart';
 
 class AddPasswordScreen extends StatefulWidget {
   final Map<String, String>? existingPassword;
-  const AddPasswordScreen({super.key, this.existingPassword});
+  final String? initialUrl;
+  const AddPasswordScreen({super.key, this.existingPassword, this.initialUrl});
+
+  static String formatPrefillUrl(String input) {
+    var clean = input.trim();
+    if (clean.isEmpty) return '';
+
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return clean;
+    }
+
+    if (clean.contains('.') && !clean.contains('/')) {
+      final parts = clean.split('.');
+      if (parts.length >= 2) {
+        final tlds = {'com', 'org', 'net', 'gov', 'edu', 'io', 'co', 'in', 'app'};
+        
+        String mainName = '';
+        String ext = 'com';
+        
+        if (tlds.contains(parts[0].toLowerCase())) {
+          ext = parts[0];
+          if (parts.length > 1) {
+            mainName = parts[1];
+          }
+        } else if (tlds.contains(parts.last.toLowerCase())) {
+          ext = parts.last;
+          if (parts.length > 1) {
+            mainName = parts[parts.length - 2];
+          }
+        } else {
+          final ignored = {'android', 'app', 'client', 'mobile', 'play'};
+          final candidateParts = parts.where((p) => !ignored.contains(p.toLowerCase())).toList();
+          if (candidateParts.isNotEmpty) {
+            mainName = candidateParts.last;
+          } else {
+            mainName = parts[0];
+          }
+        }
+        
+        if (mainName.isNotEmpty) {
+          return 'https://$mainName.$ext';
+        }
+      }
+    }
+
+    if (clean.contains('.') && !clean.contains(':') && !clean.contains('/')) {
+      return 'https://$clean';
+    }
+
+    return clean;
+  }
+
+  static String guessTitleFromUrl(String url) {
+    var clean = url.trim().toLowerCase();
+    if (clean.contains('://')) {
+      clean = clean.substring(clean.indexOf('://') + 3);
+    }
+    if (clean.startsWith('www.')) {
+      clean = clean.substring(4);
+    }
+    final parts = clean.split('/');
+    final host = parts[0].split(':')[0];
+    final hostParts = host.split('.');
+    if (hostParts.length >= 2) {
+      final tlds = {'com', 'org', 'net', 'gov', 'edu', 'io', 'co', 'in', 'app', 'uk', 'us', 'ca'};
+      if (hostParts.length >= 3 && tlds.contains(hostParts[hostParts.length - 2])) {
+        final candidate = hostParts[hostParts.length - 3];
+        if (candidate.isNotEmpty) {
+          return candidate[0].toUpperCase() + candidate.substring(1);
+        }
+      }
+      final candidate = hostParts[0];
+      if (candidate.isNotEmpty) {
+        return candidate[0].toUpperCase() + candidate.substring(1);
+      }
+    }
+    return '';
+  }
 
   @override
   State<AddPasswordScreen> createState() => AddPasswordScreenState();
@@ -20,19 +98,43 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
   String? error;
   bool isDomainValid = false;
   bool get isEditing => widget.existingPassword != null;
+  List<Map<String, String>> authenticators = [];
+  String? selectedTotpId;
 
   @override
   void initState() {
     super.initState();
     domainCtrl.addListener(validateDomain);
+    loadAuthenticators();
     if (isEditing) {
       nameCtrl.text = widget.existingPassword!['name'] ?? '';
       domainCtrl.text = widget.existingPassword!['domain'] ?? '';
       usernameCtrl.text = widget.existingPassword!['username'] ?? '';
       passwordCtrl.text = widget.existingPassword!['password'] ?? '';
       notesCtrl.text = widget.existingPassword!['notes'] ?? '';
+      selectedTotpId = widget.existingPassword!['linkedTotpId'] ?? '';
+      if (selectedTotpId == '') {
+        selectedTotpId = null;
+      }
+      validateDomain();
+    } else if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+      domainCtrl.text = widget.initialUrl!;
+      final guessedTitle = AddPasswordScreen.guessTitleFromUrl(widget.initialUrl!);
+      if (guessedTitle.isNotEmpty) {
+        nameCtrl.text = guessedTitle;
+      }
       validateDomain();
     }
+  }
+
+  Future<void> loadAuthenticators() async {
+    final list = await TotpStore.load();
+    setState(() {
+      authenticators = list;
+      if (selectedTotpId != null && !list.any((t) => t['id'] == selectedTotpId)) {
+        selectedTotpId = null;
+      }
+    });
   }
 
   void validateDomain() {
@@ -100,41 +202,18 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
     }).join(' ');
   }
 
-  String extractBaseDomain(String url) {
-    try {
-      String strUrl = url.trim().toLowerCase();
-      if (!strUrl.startsWith('http://') && !strUrl.startsWith('https://')) {
-        strUrl = 'https://$strUrl';
-      }
-      final uri = Uri.parse(strUrl);
-      String host = uri.host;
-      if (host.startsWith('www.')) {
-        host = host.substring(4);
-      }
-      final parts = host.split('.');
-      if (parts.length > 2) {
-        if (['co', 'com', 'net', 'org', 'ac']
-          .contains(parts[parts.length - 2])) {
-          return parts.sublist(parts.length - 3).join('.');
-        }
-        return parts.sublist(parts.length - 2).join('.');
-      }
-      return host;
-    } catch (_) {
-      return url;
-    }
-  }
 
   Future<void> savePassword() async {
     setState(() => error = null);
-    final title = normalizeTitle(nameCtrl.text);
-    final normalizedDomain = normalizeDomainInput(domainCtrl.text).toLowerCase();
+    final title = nameCtrl.text.trim();
+    final domain = domainCtrl.text.trim();
+    final username = usernameCtrl.text.trim();
 
     if (title.isEmpty) {
       setState(() => error = 'Title is required');
       return;
     }
-    if (usernameCtrl.text.trim().isEmpty) {
+    if (username.isEmpty) {
       setState(() => error = 'Username/Email is required');
       return;
     }
@@ -142,7 +221,7 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
       setState(() => error = 'Password is required');
       return;
     }
-    if (domainCtrl.text.trim().isEmpty) {
+    if (domain.isEmpty) {
       setState(() => error = 'A URL is required');
       return;
     }
@@ -152,59 +231,16 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
     }
 
     try {
-      final inputUsername = usernameCtrl.text.trim().toLowerCase();
-      final inputDomains = domainCtrl.text
-          .split(RegExp(r'[,\n\s]+'))
-          .where((e) => e.trim().isNotEmpty)
-          .map(extractBaseDomain)
-          .toSet();
-
-      final allPasswords = await PasswordStore.load();
-      for (var pwd in allPasswords) {
-        if (isEditing && pwd['id'] == widget.existingPassword?['id']) continue;
-
-        final pwdUsername = (pwd['username'] ?? '').toLowerCase();
-        if (pwdUsername != inputUsername) continue;
-
-        final pwdDomains = (pwd['domain'] ?? '')
-            .split(RegExp(r'[,\n\s]+'))
-            .where((e) => e.trim().isNotEmpty)
-            .map(extractBaseDomain)
-            .toSet();
-
-        if (pwdDomains.intersection(inputDomains).isNotEmpty) {
-          setState(() => error = 'Account with same username already exists');
-          return;
-        }
-      }
-
-      final binPasswords = await PasswordStore.getRecycleBin(
-        purgeExpired: true,
-      );
-      for (var pwd in binPasswords) {
-        final pwdUsername = (pwd['username'] ?? '').toLowerCase();
-        if (pwdUsername != inputUsername) continue;
-
-        final pwdDomains = (pwd['domain'] ?? '')
-            .split(RegExp(r'[,\n\s]+'))
-            .where((e) => e.trim().isNotEmpty)
-            .map(extractBaseDomain)
-            .toSet();
-
-        if (pwdDomains.intersection(inputDomains).isNotEmpty) {
-          setState(() => error = 'Account with same username presists bin');
-          return;
-        }
-      }
 
       if (isEditing) {
         final newId = await PasswordStore.update(
           widget.existingPassword!['id']!,
           title,
-          normalizedDomain,
-          usernameCtrl.text.trim().toLowerCase(),
+          domain,
+          username,
           passwordCtrl.text,
           notesCtrl.text.trim(),
+          linkedTotpId: selectedTotpId ?? '',
         );
         if (newId != null) {
           if (!mounted) return;
@@ -215,10 +251,11 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
       } else {
         final newId = await PasswordStore.add(
           title,
-          normalizedDomain,
-          usernameCtrl.text.trim().toLowerCase(),
+          domain,
+          username,
           passwordCtrl.text,
           notesCtrl.text.trim(),
+          linkedTotpId: selectedTotpId ?? '',
         );
         if (newId != null) {
           if (!mounted) return;
@@ -282,7 +319,7 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
           children: [
             TextField(
               controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Title (e.g. Google, GitHub)', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -304,9 +341,39 @@ class AddPasswordScreenState extends State<AddPasswordScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: domainCtrl,
-              decoration: InputDecoration(labelText: 'Site URL', border: const OutlineInputBorder(),
+              decoration: InputDecoration(labelText: 'URL', border: const OutlineInputBorder(),
                 errorText: domainCtrl.text.isNotEmpty && !isDomainValid ? getDomainErrorText() : null,
               ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              initialValue: selectedTotpId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Linked Authenticator (Optional)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.security),
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('None'),
+                ),
+                ...authenticators.map((auth) {
+                  final platform = auth['platform'] ?? 'Unknown';
+                  final username = auth['username'] ?? '';
+                  final displayName = username.isNotEmpty ? '$platform ($username)' : platform;
+                  return DropdownMenuItem<String?>(
+                    value: auth['id'],
+                    child: Text(displayName, overflow: TextOverflow.ellipsis),
+                  );
+                }),
+              ],
+              onChanged: (val) {
+                setState(() {
+                  selectedTotpId = val;
+                });
+              },
             ),
             const SizedBox(height: 12),
             SizedBox(

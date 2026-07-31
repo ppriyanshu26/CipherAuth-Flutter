@@ -13,7 +13,9 @@ import 'sync_screen.dart';
 import 'view_qr_screen.dart';
 import 'about_screen.dart';
 import 'support_screen.dart';
+import 'faq_screen.dart';
 import 'recycle_bin_screen.dart';
+import 'changelog_screen.dart';
 import '../../widgets/app_snackbars.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -441,6 +443,34 @@ class SettingsScreenState extends State<SettingsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const SupportScreen()),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.help_outline),
+                    title: const Text('FAQs'),
+                    subtitle: const Text('Frequently asked questions'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const FaqScreen()),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.history),
+                    title: const Text('Changelog'),
+                    subtitle: const Text('View application version history'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ChangelogScreen()),
                       );
                     },
                   ),

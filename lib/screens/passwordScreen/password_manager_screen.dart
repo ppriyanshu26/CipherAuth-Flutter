@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../utils/crypto/password_store.dart';
+import '../../main.dart';
 import 'add_password_screen.dart';
 import '../settingsScreen/settings_screen.dart';
 import 'password_flip_card.dart';
@@ -104,6 +105,32 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
     super.initState();
     load();
     widget.refreshNotifier.addListener(load);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      checkForPendingPrefillUrl();
+    });
+  }
+
+  void checkForPendingPrefillUrl() {
+    try {
+      final rootNavigator = Navigator.of(context, rootNavigator: true);
+      final rootContext = rootNavigator.context;
+      final myAppState = rootContext.findAncestorStateOfType<MyAppState>();
+      if (myAppState == null) return;
+
+      final pendingUrl = myAppState.takePendingPrefillUrl();
+      if (pendingUrl == null || pendingUrl.isEmpty) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddPasswordScreen(initialUrl: pendingUrl),
+        ),
+      ).then((result) {
+        if (result is String) {
+          widget.refreshNotifier.value++;
+        }
+      });
+    } catch (_) {}
   }
 
   @override
@@ -115,6 +142,7 @@ class PasswordManagerScreenState extends State<PasswordManagerScreen> {
 
   Future<void> load() async {
     final list = await PasswordStore.load();
+    if (!mounted) return;
     setState(() => passwords = list);
   }
 

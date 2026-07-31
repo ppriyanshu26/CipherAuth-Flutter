@@ -100,6 +100,27 @@ class AutofillService : AutofillService() {
         callback.onSuccess()
     }
 
+    private fun isUsernameField(text: String): Boolean {
+        val s = text.lowercase()
+        return s.contains("username") ||
+               s.contains("email") ||
+               s.contains("login") ||
+               s.contains("user") ||
+               s.contains("roll") ||
+               s.contains("enroll") ||
+               s.contains("member") ||
+               s.contains("candidate") ||
+               s.contains("appl") ||
+               s.contains("phone") ||
+               s.contains("mobile") ||
+               (s.contains("reg") && !s.contains("region") && !s.contains("register"))
+    }
+
+    private fun isPasswordField(text: String): Boolean {
+        val s = text.lowercase()
+        return s.contains("password") || s.contains("pwd") || s.contains("pass")
+    }
+
     private fun findAutofillFields(node: android.app.assist.AssistStructure.ViewNode, fields: MutableList<AutofillNodeInfo>, domains: MutableSet<String>) {
         val webDomain = node.webDomain
         if (!webDomain.isNullOrEmpty()) {
@@ -121,10 +142,10 @@ class AutofillService : AutofillService() {
 
         if (hints != null) {
             for (hint in hints) {
-                if (hint.contains("password", ignoreCase = true)) {
+                if (isPasswordField(hint)) {
                     isPassword = true
                 }
-                if (hint.contains("username", ignoreCase = true) || hint.contains("email", ignoreCase = true)) {
+                if (isUsernameField(hint)) {
                     isUsername = true
                 }
             }
@@ -141,21 +162,20 @@ class AutofillService : AutofillService() {
         }
 
         if (idEntry != null) {
-            val entry = idEntry.lowercase()
-            if (entry.contains("password") || entry.contains("pwd") || entry.contains("pass")) {
+            if (isPasswordField(idEntry)) {
                 isPassword = true
             }
-            if (entry.contains("username") || entry.contains("email") || entry.contains("login") || entry.contains("user")) {
+            if (isUsernameField(idEntry)) {
                 isUsername = true
             }
         }
 
         if (hintText != null) {
-            val ht = hintText.toString().lowercase()
-            if (ht.contains("password") || ht.contains("pwd") || ht.contains("pass")) {
+            val ht = hintText.toString()
+            if (isPasswordField(ht)) {
                 isPassword = true
             }
-            if (ht.contains("username") || ht.contains("email") || ht.contains("login") || ht.contains("user")) {
+            if (isUsernameField(ht)) {
                 isUsername = true
             }
         }
@@ -179,10 +199,10 @@ class AutofillService : AutofillService() {
                             }
                         }
                         if (key == "name" || key == "id" || key == "placeholder") {
-                            if (value.contains("password") || value.contains("pwd") || value.contains("pass")) {
+                            if (isPasswordField(value)) {
                                 isPassword = true
                             }
-                            if (value.contains("username") || value.contains("email") || value.contains("login") || value.contains("user")) {
+                            if (isUsernameField(value)) {
                                 isUsername = true
                             }
                         }

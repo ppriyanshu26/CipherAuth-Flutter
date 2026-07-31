@@ -230,8 +230,8 @@ class AddAccountScreenState extends State<AddAccountScreen> with SingleTickerPro
   }
 
   Future<void> saveManual() async {
-    final platform = normalizePlatformName(platformCtrl.text);
-    final username = usernameCtrl.text.trim().toLowerCase();
+    final platform = platformCtrl.text.trim();
+    final username = usernameCtrl.text.trim();
     final secret = secretCtrl.text.replaceAll(' ', '').toUpperCase();
     platformCtrl.text = platform;
 

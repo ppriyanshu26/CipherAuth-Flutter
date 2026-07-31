@@ -78,3 +78,11 @@ flutter {
 dependencies {
     implementation("androidx.autofill:autofill:1.1.0")
 }
+
+configurations.all {
+    resolutionStrategy {
+        force("androidx.datastore:datastore-preferences:1.1.1")
+        force("androidx.datastore:datastore-core:1.1.1")
+        force("androidx.datastore:datastore-preferences-core:1.1.1")
+    }
+}

@@ -6,38 +6,41 @@ import '../crypto/csv_crypto.dart';
 
 class ImportService {
   static List<List<String>> parseCsv(String content) {
-    final lines = content.split('\n');
     final rows = <List<String>>[];
+    var row = <String>[];
+    var current = '';
+    var inQuotes = false;
 
-    for (final line in lines) {
-      if (line.trim().isEmpty) continue;
+    for (var i = 0; i < content.length; i++) {
+      final char = content[i];
 
-      final row = <String>[];
-      var current = '';
-      var inQuotes = false;
-      for (var i = 0; i < line.length; i++) {
-        final char = line[i];
-        if (char == '"') {
-          if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
-            current += '"';
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
-        } else if (char == ',' && !inQuotes) {
-          row.add(current.trim());
-          current = '';
+      if (char == '"') {
+        if (inQuotes && i + 1 < content.length && content[i + 1] == '"') {
+          current += '"';
+          i++;
         } else {
-          current += char;
+          inQuotes = !inQuotes;
         }
-      }
-      if (current.isNotEmpty || line.endsWith(',')) {
+      } else if (char == ',' && !inQuotes) {
         row.add(current.trim());
+        current = '';
+      } else if ((char == '\n' || char == '\r') && !inQuotes) {
+        if (char == '\r' && i + 1 < content.length && content[i + 1] == '\n') {
+          i++;
+        }
+        if (row.isNotEmpty || current.trim().isNotEmpty) {
+          row.add(current.trim());
+          rows.add(row);
+        }
+        row = <String>[];
+        current = '';
+      } else {
+        current += char;
       }
-
-      if (row.isNotEmpty) {
-        rows.add(row);
-      }
+    }
+    if (row.isNotEmpty || current.trim().isNotEmpty) {
+      row.add(current.trim());
+      rows.add(row);
     }
     return rows;
   }
@@ -70,33 +73,66 @@ class ImportService {
         return (false, 'No data rows found in CSV', <Map<String, String>>[], <Map<String, String>>[]);
       }
 
+      final headers = rows.first.map((h) => h.trim().toLowerCase()).toList();
+
+      int getIndex(List<String> headers, List<String> aliases, int defaultIndex) {
+        for (final alias in aliases) {
+          final idx = headers.indexOf(alias);
+          if (idx != -1) return idx;
+        }
+        return defaultIndex;
+      }
+
+      final typeIdx = getIndex(headers, ['type'], 0);
+      final idIdx = getIndex(headers, ['id'], 1);
+      final titleIdx = getIndex(headers, ['title/platform', 'platform', 'title'], 2);
+      final usernameIdx = getIndex(headers, ['username', 'user'], 3);
+      final secretIdx = getIndex(headers, ['secret/password', 'password', 'secret', 'secretcode'], 4);
+      final domainIdx = getIndex(headers, ['url/domain', 'domain', 'url'], 5);
+      final notesIdx = getIndex(headers, ['notes', 'note'], 6);
+      final createdAtIdx = getIndex(headers, ['created at', 'createdat'], 7);
+      final updatedAtIdx = getIndex(headers, ['updated at', 'updatedat'], 8);
+      final linkedTotpIdx = getIndex(headers, ['linked totp id', 'linkedtotpid'], 10);
+
       List<String> padRow(List<String> row) {
         if (row.length >= expectedColumnCount) return row;
         return [...row, ...List<String>.filled(expectedColumnCount - row.length, '')];
       }
 
+      String getValue(List<String> row, int index) {
+        if (index >= 0 && index < row.length) {
+          return row[index].trim();
+        }
+        return '';
+      }
+
       final existingTotps = await TotpStore.load();
       final existingTotpIds = existingTotps.map((c) => c['id']).toSet();
+
+      final existingPasswords = await PasswordStore.load();
+      final existingPasswordIds = existingPasswords.map((c) => c['id']).toSet();
 
       final newTotps = <Map<String, String>>[];
       final newPasswords = <Map<String, String>>[];
       for (final row in dataRows) {
         final paddedRow = padRow(row);
 
-        if (paddedRow.isNotEmpty && (paddedRow[0].toLowerCase() == 'totp' || paddedRow[0].toLowerCase() == 'password')) {
-          final type = paddedRow[0].toLowerCase();
-          final title = paddedRow.length > 2 ? paddedRow[2].trim() : '';
-          final username = paddedRow.length > 3 ? paddedRow[3].trim() : '';
-          final secretOrPass = paddedRow.length > 4 ? paddedRow[4].trim() : '';
-          final domain = paddedRow.length > 5 ? paddedRow[5].trim() : '';
-          final notes = paddedRow.length > 6 ? paddedRow[6].trim() : '';
-          final hasExtendedMetadata = paddedRow.length >= 10;
+        final type = getValue(paddedRow, typeIdx).toLowerCase();
+        if (paddedRow.isNotEmpty && (type == 'totp' || type == 'password')) {
+          final title = getValue(paddedRow, titleIdx);
+          final username = getValue(paddedRow, usernameIdx);
+          final secretOrPass = getValue(paddedRow, secretIdx);
+          final domain = getValue(paddedRow, domainIdx);
+          final notes = getValue(paddedRow, notesIdx);
+          final csvId = getValue(paddedRow, idIdx);
+          final createdAt = getValue(paddedRow, createdAtIdx);
+          final updatedAt = getValue(paddedRow, updatedAtIdx);
+          final linkedTotpId = getValue(paddedRow, linkedTotpIdx);
 
           if (type == 'totp') {
             final secret = secretOrPass.toUpperCase();
             if (title.isEmpty || username.isEmpty || secret.isEmpty) continue;
 
-            final createdAt = hasExtendedMetadata ? paddedRow[7].trim() : '';
             final id = TotpStore.generateId(title, username, secret);
             if (!existingTotpIds.contains(id)) {
               newTotps.add({
@@ -110,9 +146,8 @@ class ImportService {
           } else if (type == 'password') {
             if (title.isEmpty || username.isEmpty || secretOrPass.isEmpty || domain.isEmpty) continue;
 
-            final createdAt = hasExtendedMetadata ? paddedRow[7].trim() : '';
-            final updatedAt = hasExtendedMetadata ? paddedRow[8].trim() : '';
-            final csvId = paddedRow.length > 1 ? paddedRow[1].trim() : '';
+            if (csvId.isNotEmpty && existingPasswordIds.contains(csvId)) continue;
+
             final createdAtMillis = DateTime.now().millisecondsSinceEpoch+newPasswords.length;
             newPasswords.add({
               'id': csvId.isNotEmpty ? csvId : PasswordStore.generateId(createdAtMillis),
@@ -121,14 +156,15 @@ class ImportService {
               'username': username,
               'password': secretOrPass,
               'notes': notes,
+              'linkedTotpId': linkedTotpId,
               'createdAt': createdAt,
               'updatedAt': updatedAt,
             });
           }
         } else if (paddedRow.length >= 4) {
-          final platform = paddedRow[1].trim();
-          final username = paddedRow[2].trim();
-          final secret = paddedRow[3].trim().toUpperCase();
+          final platform = getValue(paddedRow, 1);
+          final username = getValue(paddedRow, 2);
+          final secret = getValue(paddedRow, 3).toUpperCase();
           if (platform.isEmpty || username.isEmpty || secret.isEmpty) continue;
 
           final id = TotpStore.generateId(platform, username, secret);
@@ -206,6 +242,11 @@ class ImportService {
               },
             )
             .toList();
+        final importedIds = stampedPasswords
+            .map((c) => c['id'] ?? '')
+            .where((id) => id.isNotEmpty)
+            .toList();
+        await PasswordStore.removeFromRecycleBinEntries(importedIds);
         await PasswordStore.saveAllAndMerge(stampedPasswords, const []);
       }
 

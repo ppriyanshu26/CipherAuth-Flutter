@@ -245,7 +245,7 @@ class RecycleBinScreenState extends State<RecycleBinScreen> {
                           ),
                         )
                       : filteredItems.isEmpty
-                      ? const Center(child: Text('No items match your search/filter'))
+                      ? const Center(child: Text('No items match your search'))
                       : ListView.builder(
                           itemCount: filteredItems.length,
                           itemBuilder: (context, index) {

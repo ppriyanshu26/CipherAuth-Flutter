@@ -1,5 +1,5 @@
 name: CipherAuth
-description: "CipherAuth is a secure, cross-platform, local TOTP authenticator applications designed for simplicity and security."
+description: "CipherAuth is a cross-platform, local password manager suite designed for simplicity and security."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,8 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 8.0.0+60
-
+version: 8.1.0+70
 environment:
   sdk: ^3.10.7
 
@@ -30,7 +29,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.3.2
   crypto: ^3.0.3
   cryptography: ^2.7.0
   mobile_scanner: ^7.1.4
@@ -122,10 +121,12 @@ msix_config:
   publisher_display_name: Priyanshu Priyam
   identity_name: PriyanshuPriyam.CipherAuth
   publisher: CN=535EC210-8E79-4123-A1BC-3B69A02701C8
-  msix_version: 8.0.0.0
+  msix_version: 8.1.0.0
   logo_path: assets/icon/icon.png
   architecture: x64
   store: true
   min_version: 10.0.17763.0
-  max_tested_version: 10.0.22000.0
+  max_tested_version: 10.0.26200.8655
   capabilities: privateNetworkClientServer
+  execution_alias: cipherauth
+  protocol_activation: cipherauth

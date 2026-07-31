@@ -42,7 +42,7 @@ class AboutScreen extends StatelessWidget {
                     child: Image.asset('assets/icon/icon.png', fit: BoxFit.cover),
                   ),
                   const SizedBox(height: 32),
-                  const Text('Version 8.0.0',
+                  const Text('Version 8.1.0',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
